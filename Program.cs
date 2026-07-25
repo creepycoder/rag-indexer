@@ -1,31 +1,16 @@
-﻿using UEFA.Rag.Indexer.Services;
+﻿using Spectre.Console;
+using UEFA.Rag.Indexer.Services;
 
 Console.Title = "UEFA RAG Indexer";
 
-static void ClearScreen()
+// Ctrl+C → graceful exit
+Console.CancelKeyPress += (sender, e) =>
 {
-    try
-    {
-        Console.Clear();
-    }
-    catch
-    {
-        // Some terminals (e.g. VS Code debug console) don't support Clear()
-        Console.WriteLine();
-    }
-}
-
-static void WaitForKey()
-{
-    try
-    {
-        Console.ReadKey();
-    }
-    catch (InvalidOperationException)
-    {
-        Console.ReadLine();
-    }
-}
+    e.Cancel = true;
+    Console.ResetColor();
+    AnsiConsole.MarkupLine("\n[green]Goodbye![/]");
+    Environment.Exit(0);
+};
 
 var cmdArgs = Environment.GetCommandLineArgs();
 
@@ -50,51 +35,43 @@ if (cmdArgs.Length > 1)
 
 while (true)
 {
-    ClearScreen();
-    Console.WriteLine("=== UEFA RAG Indexer ===");
-    Console.WriteLine();
-    Console.WriteLine("1. Run    - Index a repository folder");
-    Console.WriteLine("2. List   - List all Qdrant collections");
-    Console.WriteLine("3. Clean  - Delete the Qdrant collection");
-    Console.WriteLine("4. Exit");
-    Console.WriteLine();
-    Console.Write("Choose an option (1-4): ");
-
-    string input;
-    try
+    // Check for Escape before showing the menu
+    if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape)
     {
-        var key = Console.ReadKey(intercept: true);
-        Console.WriteLine();
-        input = key.KeyChar.ToString().ToLowerInvariant();
-    }
-    catch (InvalidOperationException)
-    {
-        // Fallback for redirected input or environments without a console
-        input = Console.ReadLine()?.Trim().ToLowerInvariant() ?? "";
+        AnsiConsole.MarkupLine("[green]Goodbye![/]");
+        return;
     }
 
-    switch (input)
+    AnsiConsole.Write(new Rule("[yellow]UEFA RAG Indexer[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var choice = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("What would you like to do?")
+            .PageSize(10)
+            .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
+            .AddChoices([
+                "Run    - Index a repository folder",
+                "List   - List all Qdrant collections",
+                "Clean  - Delete the Qdrant collection",
+                "Exit"
+            ])
+            .HighlightStyle(new Style(foreground: Color.Cyan1, decoration: Decoration.Bold)));
+
+    switch (choice)
     {
-        case "1":
-        case "run":
+        case "Run    - Index a repository folder":
             await RunMenuAsync();
             break;
-        case "2":
-        case "list":
+        case "List   - List all Qdrant collections":
             await ListMenuAsync();
             break;
-        case "3":
-        case "clean":
+        case "Clean  - Delete the Qdrant collection":
             await CleanMenuAsync();
             break;
-        case "4":
-        case "exit":
-            Console.WriteLine("Goodbye!");
+        case "Exit":
+            AnsiConsole.MarkupLine("[green]Goodbye![/]");
             return;
-        default:
-            Console.WriteLine("Invalid option. Press any key to try again...");
-            WaitForKey();
-            break;
     }
 }
 
@@ -102,79 +79,113 @@ static async Task RunAsync(string folder)
 {
     if (!Directory.Exists(folder))
     {
-        Console.WriteLine($"Folder not found: {folder}");
+        AnsiConsole.MarkupLine($"[red]Folder not found:[/] {folder}");
         return;
     }
 
     var indexer = new IndexingService();
-    await indexer.IndexAsync(folder);
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Indexing repository...", async ctx =>
+        {
+            ctx.Status = "Indexing repository...";
+            await indexer.IndexAsync(folder);
+            ctx.Status = "Indexing completed!";
+        });
 }
 
 static async Task ListAsync()
 {
     var qdrant = new QdrantService();
-    await qdrant.ListCollectionsAsync();
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Fetching collections...", async ctx =>
+        {
+            await qdrant.ListCollectionsAsync();
+        });
 }
 
 static async Task CleanAsync()
 {
     var qdrant = new QdrantService();
-    await qdrant.DeleteCollectionAsync();
+
+    await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("red"))
+        .StartAsync("Deleting collection...", async ctx =>
+        {
+            await qdrant.DeleteCollectionAsync();
+        });
 }
 
 static async Task RunMenuAsync()
 {
-    ClearScreen();
-    Console.WriteLine("=== Run Indexer ===");
-    Console.WriteLine();
-    Console.Write("Enter the folder path to index: ");
-    var folder = Console.ReadLine()?.Trim();
+    AnsiConsole.Write(new Rule("[yellow]Run Indexer[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var folder = AnsiConsole.Ask<string>("Enter the [green]folder path[/] to index:");
 
     if (string.IsNullOrWhiteSpace(folder))
     {
-        Console.WriteLine("No folder provided. Press any key to return...");
-        WaitForKey();
+        AnsiConsole.MarkupLine("[red]No folder provided.[/]");
+        PressAnyKeyToContinue();
         return;
     }
 
     await RunAsync(folder);
 
-    Console.WriteLine();
-    Console.WriteLine("Indexing completed. Press any key to return to menu...");
-    WaitForKey();
+    AnsiConsole.MarkupLine("[green]Indexing completed.[/]");
+    PressAnyKeyToContinue();
 }
 
 static async Task ListMenuAsync()
 {
-    ClearScreen();
-    Console.WriteLine("=== List Collections ===");
-    Console.WriteLine();
+    AnsiConsole.Write(new Rule("[yellow]List Collections[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
 
     await ListAsync();
 
-    Console.WriteLine();
-    Console.WriteLine("Press any key to return to menu...");
-    WaitForKey();
+    PressAnyKeyToContinue();
 }
 
 static async Task CleanMenuAsync()
 {
-    ClearScreen();
-    Console.WriteLine("=== Clean Collection ===");
-    Console.WriteLine();
-    Console.Write("Are you sure you want to delete the Qdrant collection? (y/N): ");
-    var confirm = Console.ReadLine()?.Trim().ToLowerInvariant();
+    AnsiConsole.Write(new Rule("[yellow]Clean Collection[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
 
-    if (confirm is not ("y" or "yes"))
+    var confirmed = AnsiConsole.Confirm("Are you sure you want to delete the Qdrant collection?");
+
+    if (!confirmed)
     {
-        Console.WriteLine("Clean cancelled. Press any key to return...");
-        WaitForKey();
+        AnsiConsole.MarkupLine("[yellow]Clean cancelled.[/]");
+        PressAnyKeyToContinue();
         return;
     }
 
     await CleanAsync();
 
-    Console.WriteLine();
-    Console.WriteLine("Press any key to return to menu...");
-    WaitForKey();
+    AnsiConsole.MarkupLine("[green]Collection deleted.[/]");
+    PressAnyKeyToContinue();
+}
+
+static void PressAnyKeyToContinue()
+{
+    AnsiConsole.MarkupLine("\n[grey]Press any key to return to menu, Esc to quit...[/]");
+    try
+    {
+        var key = Console.ReadKey(true);
+        if (key.Key == ConsoleKey.Escape)
+        {
+            AnsiConsole.MarkupLine("[green]Goodbye![/]");
+            Environment.Exit(0);
+        }
+    }
+    catch (InvalidOperationException)
+    {
+        Console.ReadLine();
+    }
 }
