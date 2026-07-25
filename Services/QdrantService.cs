@@ -8,8 +8,15 @@ public class QdrantService
 {
     private static readonly LogStream Log = LogStream.Instance;
 
-    private readonly QdrantClient _client =
-        new("localhost",6334);
+    private readonly QdrantClient _client;
+
+    public QdrantService()
+    {
+        var host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
+        var portStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
+        var port = int.TryParse(portStr, out var p) ? p : 6334;
+        _client = new QdrantClient(host, port);
+    }
 
 
     private const string CollectionName = "uefa_code";

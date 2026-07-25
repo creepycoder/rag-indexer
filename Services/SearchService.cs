@@ -11,13 +11,17 @@ public class SearchService
     public SearchService()
     {
         _http = new HttpClient();
-        _qdrant = new QdrantClient("localhost", 6334);
+        var qdrantHost = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
+        var portStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
+        var port = int.TryParse(portStr, out var p) ? p : 6334;
+        _qdrant = new QdrantClient(qdrantHost, port);
     }
 
     public async Task SearchAsync(string query)
     {
+        var ollamaBaseUrl = Environment.GetEnvironmentVariable("OLLAMA_BASE_URL") ?? "http://localhost:11434";
         var response = await _http.PostAsJsonAsync(
-            "http://localhost:11434/api/embed",
+            $"{ollamaBaseUrl}/api/embed",
             new
             {
                 model = "mxbai-embed-large",

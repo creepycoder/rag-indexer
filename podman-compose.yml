@@ -1,0 +1,58 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# podman-compose.yml  –  Orchestrates Qdrant + UEFA.Rag.Indexer
+#
+# Usage:
+#   podman-compose build          # build the indexer image
+#   podman-compose up -d          # start Qdrant + indexer (interactive menu)
+#   podman-compose run --rm       # one-shot index (override command)
+#
+# Environment variables (can be placed in an .env file):
+#   REPO_PATH      – Absolute path of the repository to index (default: .)
+#   OLLAMA_BASE_URL– Ollama endpoint  (default: http://host.docker.internal:11434)
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Vector database ──────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: uefa-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"       # REST API (health checks, UI)
+      - "6334:6334"       # gRPC  (used by the indexer)
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Indexer ──────────────────────────────────────────────────────────────
+  indexer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: uefa-indexer
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: "6334"
+      OLLAMA_BASE_URL: "${OLLAMA_BASE_URL:-http://host.docker.internal:11434}"
+    volumes:
+      - "${REPO_PATH:-.}:/repo:ro"
+    # Interactive mode: run with -it and the interactive menu appears
+    stdin_open: true
+    tty: true
+    # Override the entrypoint with "run <path>" for non-interactive use:
+    #   podman-compose run indexer dotnet UEFA.Rag.Indexer.dll run /repo
+    #
+    # Default: launches the interactive menu inside the container.
+    command: ["dotnet", "UEFA.Rag.Indexer.dll"]
+
+volumes:
+  qdrant_storage:
