@@ -6,13 +6,18 @@ namespace UEFA.Rag.Indexer.Services;
 
 public class QdrantService
 {
+    private static readonly LogStream Log = LogStream.Instance;
+
     private readonly QdrantClient _client =
         new("localhost",6334);
 
 
     private const string CollectionName = "uefa_code";
 
-    public async Task EnsureCollectionExistsAsync()
+    /// <summary>
+    /// Ensures the collection exists. Returns true if the collection was just created.
+    /// </summary>
+    public async Task<bool> EnsureCollectionExistsAsync()
     {
         var collections = await _client.ListCollectionsAsync();
 
@@ -26,8 +31,11 @@ public class QdrantService
                     Distance = Distance.Cosine
                 });
 
-            Console.WriteLine($"Created collection '{CollectionName}'.");
+            Log.Info("Qdrant", $"Created collection '{CollectionName}'.");
+            return true; // was just created — state is stale
         }
+
+        return false; // already existed
     }
 
     public async Task InsertAsync(
@@ -58,28 +66,65 @@ public class QdrantService
             });
     }
 
+    /// <summary>
+    /// Deletes all points whose file path starts with the given prefix.
+    /// Used to remove chunks from deleted or renamed files during delta indexing.
+    /// </summary>
+    public async Task DeleteByFilePathAsync(string filePath)
+    {
+        await _client.DeleteAsync(
+            CollectionName,
+            new Filter
+            {
+                Must =
+                {
+                    new Condition
+                    {
+                        Field = new FieldCondition
+                        {
+                            Key = "file",
+                            Match = new Match
+                            {
+                                Text = filePath
+                            }
+                        }
+                    }
+                }
+            });
+
+        Log.Info("Qdrant", $"Deleted points for: {filePath}");
+    }
+
     public async Task DeleteCollectionAsync()
     {
+        var collections = await _client.ListCollectionsAsync();
+
+        if (!collections.Contains(CollectionName))
+        {
+            Log.Warning("Qdrant", $"Collection '{CollectionName}' does not exist. Nothing to delete.");
+            return;
+        }
+
         await _client.DeleteCollectionAsync(CollectionName);
-        Console.WriteLine($"Collection '{CollectionName}' deleted successfully.");
+        Log.Info("Qdrant", $"Collection '{CollectionName}' deleted successfully.");
     }
 
     public async Task ListCollectionsAsync()
     {
         var collections = await _client.ListCollectionsAsync();
 
-        Console.WriteLine("Qdrant Collections:");
-        Console.WriteLine("-------------------");
+        Log.Info("Qdrant", "Qdrant Collections:");
+        Log.Info("Qdrant", "-------------------");
 
         if (collections.Count == 0)
         {
-            Console.WriteLine("(no collections found)");
+            Log.Info("Qdrant", "(no collections found)");
             return;
         }
 
         foreach (var name in collections)
         {
-            Console.WriteLine($"  - {name}");
+            Log.Info("Qdrant", $"  - {name}");
         }
     }
 }
