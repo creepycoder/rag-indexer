@@ -105,13 +105,32 @@ static async Task ListAsync()
 {
     var qdrant = new QdrantService();
 
-    await AnsiConsole.Status()
+    var collections = await AnsiConsole.Status()
         .Spinner(Spinner.Known.Dots)
         .SpinnerStyle(Style.Parse("green"))
         .StartAsync("Fetching collections...", async ctx =>
         {
-            await qdrant.ListCollectionsAsync();
+            return await qdrant.ListCollectionsAsync();
         });
+
+    AnsiConsole.Write(new Rule("[yellow]Qdrant Collections[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    if (collections.Count == 0)
+    {
+        AnsiConsole.MarkupLine("[grey](no collections found)[/]");
+    }
+    else
+    {
+        var table = new Table().AddColumn("Name");
+        foreach (var name in collections)
+        {
+            table.AddRow(name);
+        }
+        AnsiConsole.Write(table);
+    }
+
+    AnsiConsole.WriteLine();
 }
 
 static async Task CleanAsync()

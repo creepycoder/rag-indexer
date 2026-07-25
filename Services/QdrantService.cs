@@ -116,22 +116,9 @@ public class QdrantService
         Log.Info("Qdrant", $"Collection '{CollectionName}' deleted successfully.");
     }
 
-    public async Task ListCollectionsAsync()
+    public async Task<List<string>> ListCollectionsAsync()
     {
         var collections = await _client.ListCollectionsAsync();
-
-        Log.Info("Qdrant", "Qdrant Collections:");
-        Log.Info("Qdrant", "-------------------");
-
-        if (collections.Count == 0)
-        {
-            Log.Info("Qdrant", "(no collections found)");
-            return;
-        }
-
-        foreach (var name in collections)
-        {
-            Log.Info("Qdrant", $"  - {name}");
-        }
+        return [.. collections];
     }
 }
