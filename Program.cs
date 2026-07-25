@@ -59,7 +59,6 @@ while (true)
                 "List   - List all Qdrant collections",
                 "Info   - Collection details",
                 "Clean  - Delete the Qdrant collection",
-                "Logs   - View live log stream",
                 "Exit"
             ])
             .HighlightStyle(new Style(foreground: Color.Cyan1, decoration: Decoration.Bold)));
@@ -77,9 +76,6 @@ while (true)
             break;
         case "Clean  - Delete the Qdrant collection":
             await CleanMenuAsync();
-            break;
-        case "Logs   - View live log stream":
-            await LogStreamMenuAsync();
             break;
         case "Exit":
             AnsiConsole.MarkupLine("[green]Goodbye![/]");
@@ -238,95 +234,6 @@ static async Task CleanMenuAsync()
 
     AnsiConsole.MarkupLine("[green]Collection deleted.[/]");
     PressAnyKeyToContinue();
-}
-
-static async Task LogStreamMenuAsync()
-{
-    AnsiConsole.Write(new Rule("[yellow]Live Log Stream[/]").RuleStyle("grey"));
-    AnsiConsole.WriteLine();
-
-    var log = LogStream.Instance;
-
-    // Optional: filter by minimum log level
-    var minLevel = AnsiConsole.Prompt(
-        new SelectionPrompt<LogLevel>()
-            .Title("Filter by minimum log level?")
-            .PageSize(5)
-            .AddChoices(LogLevel.Debug, LogLevel.Info, LogLevel.Warning, LogLevel.Error)
-            .HighlightStyle(new Style(foreground: Color.Cyan1, decoration: Decoration.Bold)));
-
-    AnsiConsole.MarkupLine("[grey]Press [yellow]Q[/] or [yellow]Esc[/] to stop the log stream and return to menu.[/]");
-    AnsiConsole.WriteLine();
-
-    // Show existing buffered entries first
-    var snapshot = log.GetFiltered(minLevel: minLevel);
-    foreach (var entry in snapshot)
-    {
-        WriteLogEntry(entry, minLevel);
-    }
-
-    // Live subscription
-    var cts = new CancellationTokenSource();
-    var onEntry = (LogEntry entry) =>
-    {
-        if (entry.Level >= minLevel)
-        {
-            WriteLogEntry(entry, minLevel);
-        }
-    };
-
-    log.OnEntry += onEntry;
-
-    try
-    {
-        // Wait until user presses Q or Esc
-        while (!cts.Token.IsCancellationRequested)
-        {
-            if (Console.KeyAvailable)
-            {
-                var key = Console.ReadKey(true);
-                if (key.Key is ConsoleKey.Q or ConsoleKey.Escape)
-                {
-                    break;
-                }
-            }
-
-            await Task.Delay(200, cts.Token);
-        }
-    }
-    catch (OperationCanceledException)
-    {
-        // Expected when token is cancelled
-    }
-    finally
-    {
-        log.OnEntry -= onEntry;
-    }
-
-    AnsiConsole.WriteLine();
-    AnsiConsole.MarkupLine("[green]Log stream stopped.[/]");
-    PressAnyKeyToContinue();
-}
-
-static void WriteLogEntry(LogEntry entry, LogLevel minLevel)
-{
-    if (entry.Level < minLevel)
-        return;
-
-    var color = entry.Level switch
-    {
-        LogLevel.Debug => "grey",
-        LogLevel.Info => "white",
-        LogLevel.Warning => "yellow",
-        LogLevel.Error => "red",
-        _ => "white"
-    };
-
-    var lines = entry.Formatted.Split('\n');
-    foreach (var line in lines)
-    {
-        AnsiConsole.MarkupLine($"[{color}]{line.EscapeMarkup()}[/]");
-    }
 }
 
 static void PressAnyKeyToContinue()
