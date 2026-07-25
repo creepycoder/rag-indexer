@@ -283,6 +283,7 @@ This launches the interactive menu:
 ├──────────────────────────────────┤
 │  Run    - Index a repository     │
 │  List   - List all collections   │
+│  Info   - Collection details     │
 │  Clean  - Delete the collection  │
 │  Logs   - View live log stream   │
 │  Exit                            │
@@ -297,6 +298,9 @@ dotnet run -- run "C:\Projects\MyApp"
 
 # List Qdrant collections
 dotnet run -- list
+
+# Show collection details
+dotnet run -- info
 
 # Delete the Qdrant collection
 dotnet run -- clean

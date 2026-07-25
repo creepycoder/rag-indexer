@@ -25,6 +25,9 @@ if (cmdArgs.Length > 1)
         case "list":
             await ListAsync();
             return;
+        case "info":
+            await InfoAsync(cmdArgs.Length > 2 ? cmdArgs[2] : "uefa_code");
+            return;
         case "clean":
             await CleanAsync();
             return;
