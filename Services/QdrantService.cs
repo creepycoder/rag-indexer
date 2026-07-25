@@ -45,4 +45,23 @@ public class QdrantService
         await _client.DeleteCollectionAsync(CollectionName);
         Console.WriteLine($"Collection '{CollectionName}' deleted successfully.");
     }
+
+    public async Task ListCollectionsAsync()
+    {
+        var collections = await _client.ListCollectionsAsync();
+
+        Console.WriteLine("Qdrant Collections:");
+        Console.WriteLine("-------------------");
+
+        if (collections.Count == 0)
+        {
+            Console.WriteLine("(no collections found)");
+            return;
+        }
+
+        foreach (var name in collections)
+        {
+            Console.WriteLine($"  - {name}");
+        }
+    }
 }

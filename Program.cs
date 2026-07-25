@@ -8,10 +8,11 @@ while (true)
     Console.WriteLine("=== UEFA RAG Indexer ===");
     Console.WriteLine();
     Console.WriteLine("1. Run    - Index a repository folder");
-    Console.WriteLine("2. Clean  - Delete the Qdrant collection");
-    Console.WriteLine("3. Exit");
+    Console.WriteLine("2. List   - List all Qdrant collections");
+    Console.WriteLine("3. Clean  - Delete the Qdrant collection");
+    Console.WriteLine("4. Exit");
     Console.WriteLine();
-    Console.Write("Choose an option (1-3): ");
+    Console.Write("Choose an option (1-4): ");
 
     var input = Console.ReadLine()?.Trim().ToLowerInvariant();
 
@@ -22,10 +23,14 @@ while (true)
             await RunMenuAsync();
             break;
         case "2":
+        case "list":
+            await ListMenuAsync();
+            break;
+        case "3":
         case "clean":
             await CleanMenuAsync();
             break;
-        case "3":
+        case "4":
         case "exit":
             Console.WriteLine("Goodbye!");
             return;
@@ -65,6 +70,20 @@ static async Task RunMenuAsync()
 
     Console.WriteLine();
     Console.WriteLine("Indexing completed. Press any key to return to menu...");
+    Console.ReadKey();
+}
+
+static async Task ListMenuAsync()
+{
+    Console.Clear();
+    Console.WriteLine("=== List Collections ===");
+    Console.WriteLine();
+
+    var qdrant = new QdrantService();
+    await qdrant.ListCollectionsAsync();
+
+    Console.WriteLine();
+    Console.WriteLine("Press any key to return to menu...");
     Console.ReadKey();
 }
 
