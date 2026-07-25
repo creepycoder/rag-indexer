@@ -12,6 +12,24 @@ public class QdrantService
 
     private const string CollectionName = "uefa_code";
 
+    public async Task EnsureCollectionExistsAsync()
+    {
+        var collections = await _client.ListCollectionsAsync();
+
+        if (!collections.Contains(CollectionName))
+        {
+            await _client.CreateCollectionAsync(
+                CollectionName,
+                new VectorParams
+                {
+                    Size = 768,
+                    Distance = Distance.Cosine
+                });
+
+            Console.WriteLine($"Created collection '{CollectionName}'.");
+        }
+    }
+
     public async Task InsertAsync(
         CodeChunk chunk,
         float[] vector)

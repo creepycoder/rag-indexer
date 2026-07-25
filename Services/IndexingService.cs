@@ -24,6 +24,8 @@ public class IndexingService
     {
         Console.WriteLine($"Scanning: {rootFolder}");
 
+        await _qdrant.EnsureCollectionExistsAsync();
+
         _ignore = new RagIgnore(rootFolder);
 
         var files = _scanner.Scan(rootFolder)
