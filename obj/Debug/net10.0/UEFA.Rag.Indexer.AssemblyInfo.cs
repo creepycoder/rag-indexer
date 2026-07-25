@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("UEFA.Rag.Indexer")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+749057efc02a172a4a3fcdbe4c1b3744acaab28f")]
 [assembly: System.Reflection.AssemblyProductAttribute("UEFA.Rag.Indexer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("UEFA.Rag.Indexer")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -10,12 +10,14 @@ public class QdrantService
         new("localhost",6334);
 
 
+    private const string CollectionName = "uefa_code";
+
     public async Task InsertAsync(
         CodeChunk chunk,
         float[] vector)
     {
         await _client.UpsertAsync(
-            "uefa_code",
+            CollectionName,
             new[]
             {
                 new PointStruct
@@ -36,5 +38,11 @@ public class QdrantService
                     }
                 }
             });
+    }
+
+    public async Task DeleteCollectionAsync()
+    {
+        await _client.DeleteCollectionAsync(CollectionName);
+        Console.WriteLine($"Collection '{CollectionName}' deleted successfully.");
     }
 }
