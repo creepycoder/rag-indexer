@@ -54,6 +54,7 @@ while (true)
             .AddChoices([
                 "Run    - Index a repository folder",
                 "List   - List all Qdrant collections",
+                "Info   - Collection details",
                 "Clean  - Delete the Qdrant collection",
                 "Logs   - View live log stream",
                 "Exit"
@@ -67,6 +68,9 @@ while (true)
             break;
         case "List   - List all Qdrant collections":
             await ListMenuAsync();
+            break;
+        case "Info   - Collection details":
+            await InfoMenuAsync();
             break;
         case "Clean  - Delete the Qdrant collection":
             await CleanMenuAsync();
@@ -174,6 +178,43 @@ static async Task ListMenuAsync()
     await ListAsync();
 
     PressAnyKeyToContinue();
+}
+
+static async Task InfoMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]Collection Info[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var name = AnsiConsole.Ask("Collection name:", "uefa_code");
+    await InfoAsync(name);
+
+    PressAnyKeyToContinue();
+}
+
+static async Task InfoAsync(string collectionName)
+{
+    var qdrant = new QdrantService();
+
+    var info = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Fetching collection info...", async ctx =>
+        {
+            return await qdrant.GetCollectionInfoAsync(collectionName);
+        });
+
+    var table = new Table()
+        .AddColumn("Property")
+        .AddColumn("Value");
+
+    table.AddRow("Name", collectionName);
+    table.AddRow("Status", info.Status.ToString());
+    table.AddRow("Points", info.PointsCount.ToString());
+    table.AddRow("Segments", info.SegmentsCount.ToString());
+    table.AddRow("Vectors (indexed)", info.IndexedVectorsCount.ToString());
+    table.AddRow("Queue", info.UpdateQueue.ToString());
+
+    AnsiConsole.Write(table);
 }
 
 static async Task CleanMenuAsync()

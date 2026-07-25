@@ -121,4 +121,9 @@ public class QdrantService
         var collections = await _client.ListCollectionsAsync();
         return [.. collections];
     }
+
+    public async Task<CollectionInfo> GetCollectionInfoAsync(string name)
+    {
+        return await _client.GetCollectionInfoAsync(name);
+    }
 }
