@@ -6,14 +6,12 @@ A **.NET 10 console application** that indexes source code repositories into a v
 
 ## What's New
 
-### v3 — Containerized with Podman Compose
+### v4 — Qdrant-Only Compose
 
 | Feature | Description |
 |---------|-------------|
-| **Dockerfile** | Multi-stage build for a tiny runtime image (`.NET 10 AOT-ready` SDK → publish → `aspnet:10.0` runtime). |
-| **Podman Compose** | `podman-compose.yml` orchestrates a Qdrant service (with health check) + the indexer container, wired via `depends_on`. |
-| **Env‑Var Configuration** | `QDRANT_HOST`, `QDRANT_PORT`, and `OLLAMA_BASE_URL` are read from environment variables. Defaults preserve local development behaviour. |
-| **Read-Only Volume** | The repository to index is mounted as `/repo` (read-only) so the indexer never mutates your source tree. |
+| **Podman Compose** | `podman-compose.yml` runs only Qdrant — no indexer container. The console app connects from the host via `localhost:6334`. |
+| **Lighter Workflow** | No need to build a container image or mount volumes for the indexer. Just `podman compose up -d` and run `dotnet run` on the host. |
 
 ### v2 — Incremental Indexing & Live Log Stream
 
@@ -343,77 +341,55 @@ Select "Logs" from the menu, choose a minimum log level, and watch real-time log
 
 ---
 
-## Containerized App (Podman Compose)
+## Qdrant via Podman Compose
 
-The project includes a `Dockerfile` and a `podman-compose.yml` that orchestrate a **Qdrant** instance together with the indexer, so you never need to install Qdrant directly.
+The `podman-compose.yml` runs **only Qdrant** in a container, letting the console app connect from the host. No container image to build, no volume mounts for source code.
 
 ### Prerequisites
 
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Podman** | Container engine | [podman.io](https://podman.io/docs/installation) |
-| **podman-compose** | Compose orchestration | `pip install podman-compose` |
-| **Ollama** | Embedding service (host) | [ollama.com](https://ollama.com/) – must be running on the host with `mxbai-embed-large` pulled |
+| **Ollama** | Embedding service | [ollama.com](https://ollama.com/) – must be running on the host with `mxbai-embed-large` pulled |
 
-> The compose file expects Ollama to be accessible from inside the container. On Windows/macOS it uses the special DNS name `host.docker.internal`; on Linux you may need to set `OLLAMA_BASE_URL=http://host.containers.internal:11434` or the host's LAN IP.
-
-### Build the Image
+### Start Qdrant
 
 ```bash
-podman-compose build
+podman compose up -d
 ```
 
-### Run (Interactive Menu)
+Qdrant is now available at:
+- `localhost:6333` — REST API (health checks, UI)
+- `localhost:6334` — gRPC (used by the indexer)
+
+### Stop Qdrant
 
 ```bash
-podman-compose up      # or podman-compose up -d for detached mode
+podman compose down
 ```
 
-Attach to the indexer container with:
-
-```bash
-podman attach uefa-indexer
-```
-
-You'll see the interactive menu. When you select **Run**, enter `/repo` as the folder path (the host directory mapped via the volume).
-
-### Run (One‑Shot, Non‑Interactive)
-
-Specify the repository path via the `REPO_PATH` environment variable and override the command:
-
-```bash
-# PowerShell
-$env:REPO_PATH = "C:\Projects\MyApp"
-podman-compose run --rm indexer dotnet UEFA.Rag.Indexer.dll run /repo
-```
-
-```bash
-# Linux / macOS
-REPO_PATH=/home/user/projects/myapp \
-  podman-compose run --rm indexer dotnet UEFA.Rag.Indexer.dll run /repo
-```
-
-### Compose Topology
+### Topology
 
 ```
-┌─────────────────────────────────────────┐
-│  Host                                    │
-│  ┌──────────────┐    ┌────────────────┐  │
-│  │  Qdrant       │    │  Indexer        │  │
-│  │  :6333 (REST) │◄───│  ( .NET 10 )   │  │
-│  │  :6334 (gRPC) │    │                │  │
-│  └──────────────┘    └───────┬─────────┘  │
-│                              │ /repo:ro   │
-│                  ┌───────────▼──────────┐ │
-│                  │  Host source folder  │ │
-│                  └──────────────────────┘ │
-│                              │            │
-│                  ┌───────────▼──────────┐ │
-│                  │  Ollama              │ │
-│                  │  host.docker.internal│ │
-│                  │  :11434              │ │
-│                  └──────────────────────┘ │
-└─────────────────────────────────────────┘
+┌─────────────────────────────┐
+│  Host                        │
+│                              │
+│  ┌──────────────┐           │
+│  │  Qdrant       │           │
+│  │  :6333 (REST) │           │
+│  │  :6334 (gRPC) │◄── ─┐    │
+│  └──────────────┘      │    │
+│                         │    │
+│  ┌──────────────────┐   │    │
+│  │  .NET 10 Console │───┘    │
+│  │  (dotnet run)    │        │
+│  └──────────────────┘        │
+│                              │
+│  ┌──────────────────┐        │
+│  │  Ollama           │        │
+│  │  localhost:11434  │        │
+│  └──────────────────┘        │
+└─────────────────────────────┘
 ```
 
 ### Environment Variables
@@ -423,7 +399,6 @@ REPO_PATH=/home/user/projects/myapp \
 | `QDRANT_HOST` | `localhost` | Qdrant gRPC hostname |
 | `QDRANT_PORT` | `6334` | Qdrant gRPC port |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama HTTP endpoint |
-| `REPO_PATH` | `.` (current dir) | Host path to the repository to index (used by `podman-compose.yml` for the volume mount) |
 
 ---
 
