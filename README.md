@@ -4,49 +4,69 @@ A **.NET 10 console application** that indexes source code repositories into a v
 
 ---
 
+## What's New
+
+### v2 — Incremental Indexing & Live Log Stream
+
+| Feature | Description |
+|---------|-------------|
+| **Incremental (Delta) Indexing** | Only new, modified, or deleted files are re-processed on each run. Unchanged files are skipped entirely — no wasted parsing, embedding, or Qdrant writes. |
+| **Interrupt-Resilient** | State is saved after every file. If you Ctrl+C or crash mid-way, the next run picks up exactly where you left off. |
+| **Collection Deletion Detection** | If you delete the Qdrant collection (e.g. via "Clean"), the stale state file is automatically discarded and a full re-index is performed. |
+| **Deterministic Chunk IDs** | Each chunk's Qdrant UUID is derived from its content (SHA-256). Same content → same UUID → upsert naturally deduplicates. No duplicate points. |
+| **Live Log Stream** | Real-time log viewer with level filtering (Debug/Info/Warning/Error). Shows buffered history + live events. Press Q or Esc to stop. |
+| **Interactive Menu** | Full console UI with arrow-key navigation, status spinners, and graceful Ctrl+C handling. |
+
+---
+
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Program.cs                                                             │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  IndexingService                                                  │   │
-│  │  ┌────────────────┐  ┌──────────────┐  ┌────────────────┐       │   │
-│  │  │ RepositoryScan │→│ CSharpCode   │→│ EmbeddingService│       │   │
-│  │  │ ner            │  │ Parser       │  │ (Ollama)       │       │   │
-│  │  └────────────────┘  └──────────────┘  └───────┬────────┘       │   │
-│  │                                                 │                │   │
-│  │                                                 ▼                │   │
-│  │                                        ┌────────────────┐       │   │
-│  │                                        │ QdrantService  │       │   │
-│  │                                        │ (Vector DB)    │       │   │
-│  │                                        └────────────────┘       │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-│                                                                         │
-│  SearchService (standalone query tool, not wired in Program.cs yet)     │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│  Program.cs (Interactive Menu)                                                    │
+│  ┌───────────────────────────────────────────────────────────────────────────┐   │
+│  │  IndexingService                                                           │   │
+│  │  ┌────────────────┐  ┌──────────────┐  ┌────────────────┐  ┌───────────┐ │   │
+│  │  │ RepositoryScan │→│ CSharpCode   │→│ EmbeddingService│→│ Qdrant    │ │   │
+│  │  │ ner            │  │ Parser       │  │ (Ollama)       │  │ Service   │ │   │
+│  │  └────────────────┘  └──────────────┘  └───────┬────────┘  └───────────┘ │   │
+│  │                                                 │                          │   │
+│  │  ┌──────────────────────────────────────────────┘                          │   │
+│  │  │                                                                         │   │
+│  │  │  IndexStateManager (delta detection via .ragindex-state.json)           │   │
+│  │  └─────────────────────────────────────────────────────────────────────────┘   │
+│  │                                                                                 │
+│  │  LogStream (singleton, event-driven, in-memory log buffer)                     │
+│  └───────────────────────────────────────────────────────────────────────────┘   │
+│                                                                                   │
+│  SearchService (standalone query tool, not wired in Program.cs yet)               │
+└──────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Features
 
+- **Interactive Console UI** – Arrow-key menu navigation, status spinners, graceful exit on Ctrl+C or Esc.
+- **Incremental (Delta) Indexing** – Only processes files that have changed since the last run. State tracked via `.ragindex-state.json`.
+- **Interrupt-Resilient** – State saved after every file. Crash recovery resumes from the last fully-processed file.
 - **Repository Scanning** – Recursively walks a folder, filtering by supported extensions and respecting `.ragignore` patterns.
 - **C# Semantic Parsing** – Uses Roslyn (`Microsoft.CodeAnalysis.CSharp`) to parse `.cs` files into two levels of granularity: **class** definitions and **method** definitions.
 - **Document Indexing** – Non-C# files (`.csproj`, `.json`, `.yaml`, `.md`, `.sql`, `.xml`, `.config`, `.sln`) are indexed as whole-document chunks.
 - **Vector Embedding** – Calls [Ollama](https://ollama.com/) hosted at `localhost:11434` using the `mxbai-embed-large` model to generate float embeddings.
 - **Vector Storage** – Stores embeddings along with rich metadata (project, file path, namespace, symbol type/name, source content) in [Qdrant](https://qdrant.tech/) at `localhost:6334` (gRPC).
+- **Live Log Stream** – Real-time log viewer with level filtering. Shows buffered history + live events via event subscription.
 - **Semantic Search** – `SearchService` accepts a natural-language query, embeds it via Ollama, and returns the top-5 most similar code chunks from Qdrant.
 
 ---
 
 ## Data Model
 
-**`CodeChunk`** (in `Models/CodeChunk.cs`):
+### `CodeChunk` (in `Models/CodeChunk.cs`)
 
 | Property       | Type           | Description                                                    |
 |----------------|----------------|----------------------------------------------------------------|
-| `Id`           | `string`       | Unique identifier (auto-generated GUID)                        |
+| `Id`           | `string`       | Deterministic UUID derived from content (SHA-256 → first 16 bytes as GUID) |
 | `Project`      | `string`       | Top-level folder name under the scanned root                   |
 | `FilePath`     | `string`       | Full path to the source file                                   |
 | `Namespace`    | `string`       | .NET namespace (extracted for C# files)                        |
@@ -58,7 +78,24 @@ A **.NET 10 console application** that indexes source code repositories into a v
 | `Dependencies` | `List<string>` | _(reserved)_ Inferred dependencies                              |
 | `Content`      | `string`       | Full source text of the chunk                                   |
 
-**Qdrant Payload:** Each point stores a 1-to-1 mapping of the `CodeChunk` fields except `Usings`, `Attributes`, `Dependencies` (reserved for future use).
+> **Note:** `Id` is no longer a random GUID. It is deterministically computed from `filePath::symbolType::symbolName::content` via SHA-256. This ensures the same chunk always maps to the same Qdrant point, enabling upsert-based deduplication during delta indexing.
+
+### `IndexState` (in `Models/IndexState.cs`)
+
+| Property  | Type                          | Description                                    |
+|-----------|-------------------------------|------------------------------------------------|
+| `Version` | `int`                         | State file format version                      |
+| `Files`   | `Dictionary<string, FileState>` | Maps file paths to their content hashes + timestamps |
+
+### `LogEntry` (in `Models/LogEntry.cs`)
+
+| Property    | Type       | Description                              |
+|-------------|------------|------------------------------------------|
+| `Timestamp` | `DateTime` | When the log entry was created           |
+| `Level`     | `LogLevel` | Debug, Info, Warning, Error              |
+| `Source`    | `string`   | Component that emitted the log           |
+| `Message`   | `string`   | Log message text                         |
+| `Formatted` | `string`   | Pre-formatted string for display         |
 
 ---
 
@@ -66,20 +103,26 @@ A **.NET 10 console application** that indexes source code repositories into a v
 
 ```
 UEFA.Rag.Indexer/
-├── Program.cs                     # Entry point
+├── Program.cs                     # Entry point (interactive menu)
 ├── UEFA.Rag.Indexer.csproj        # .NET 10 project file
 ├── .ragignore                     # Ignore patterns (gitignore-style)
+├── .ragindex-state.json           # Auto-generated index state (do not commit)
 ├── README.md                      # This file
 ├── Models/
-│   └── CodeChunk.cs               # Chunk data model
+│   ├── CodeChunk.cs               # Chunk data model
+│   ├── IndexState.cs              # Index state data model
+│   └── LogEntry.cs                # Structured log entry model
 └── Services/
     ├── RepositoryScanner.cs       # File discovery
     ├── RagIgnore.cs               # .ragignore pattern matching
     ├── CSharpCodeParser.cs        # Roslyn-based C# parser
     ├── EmbeddingService.cs        # Ollama embedding client
     ├── QdrantService.cs           # Qdrant vector DB client
-    ├── IndexingService.cs         # Orchestration pipeline
-    └── SearchService.cs           # Semantic search
+    ├── IndexingService.cs         # Orchestration pipeline (delta-aware)
+    ├── IndexStateManager.cs       # State file management & delta computation
+    ├── SearchService.cs           # Semantic search
+    ├── LogStream.cs               # Singleton in-memory log buffer with event subscription
+    └── ...
 ```
 
 ---
@@ -88,13 +131,20 @@ UEFA.Rag.Indexer/
 
 ### Indexing (`IndexingService.IndexAsync`)
 
-1. **Scan** – `RepositoryScanner` enumerates all files under the root folder with supported extensions (`.cs`, `.csproj`, `.sln`, `.json`, `.yaml`, `.yml`, `.xml`, `.config`, `.sql`, `.md`).
+1. **Scan** – `RepositoryScanner` enumerates all files under the root folder with supported extensions.
 2. **Filter** – `RagIgnore` excludes files matching patterns defined in `.ragignore`.
-3. **Parse** – For each file:
+3. **Load State** – `IndexStateManager` reads `.ragindex-state.json` (if it exists).
+4. **Compute Delta** – Compares current files against the state to find new, modified, and deleted files.
+5. **Remove Deleted** – For each deleted file, its Qdrant points are removed via `DeleteByFilePathAsync`.
+6. **Process Changes** – For each new/modified file:
+   - Old points are removed (if re-indexing a modified file).
    - **C# files** (`.cs`) → `CSharpCodeParser` extracts every **class** and its **methods** as separate chunks.
    - **Other files** → a single `"document"` chunk with the full file content.
-4. **Embed** – Each chunk's `Content` is sent to Ollama's `/api/embed` endpoint to produce a `float[]` vector.
-5. **Store** – The vector and associated payload are upserted into the Qdrant collection `uefa_code`.
+   - Each chunk gets a deterministic ID via `ComputeDeterministicId()`.
+   - Each chunk's `Content` is sent to Ollama's `/api/embed` endpoint to produce a `float[]` vector.
+   - The vector and payload are upserted into the Qdrant collection `uefa_code`.
+   - State is saved after every file (interrupt-resilient).
+7. **Final Save** – State file is saved one last time.
 
 ### Search (`SearchService.SearchAsync`)
 
@@ -111,6 +161,7 @@ UEFA.Rag.Indexer/
 | `Microsoft.CodeAnalysis.CSharp`           | 5.6.0     | C# syntax parsing (Roslyn)      |
 | `Microsoft.Extensions.FileSystemGlobbing` | 10.0.10   | `.ragignore` glob pattern matching |
 | `Qdrant.Client`                           | 1.18.1    | gRPC client for Qdrant          |
+| `Spectre.Console`                         | 0.57.2    | Interactive console UI          |
 
 ### External Services
 
@@ -192,17 +243,7 @@ docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant
 
    By default it listens on `localhost:6334` for gRPC.
 
-**Create the collection (required before first index run):**
-
-The application expects a collection named `uefa_code` with vectors of dimension **1024** (the output size of `mxbai-embed-large`). Use the REST API to create it:
-
-```powershell
-curl -X PUT http://localhost:6333/collections/uefa_code `
-  -H "Content-Type: application/json" `
-  -d '{"vectors": {"size": 1024, "distance": "Cosine"}}'
-```
-
-> If the collection does not exist, `QdrantService.InsertAsync` will fail. Run this command once before the first indexing session.
+> The application automatically creates the `uefa_code` collection on first run if it doesn't exist.
 
 ---
 
@@ -221,17 +262,38 @@ dotnet build
 
 ### Run the Indexer
 
-The indexer accepts a target folder path as the first argument. If omitted, it defaults to `C:\UEFA`.
-
 ```powershell
-# Index a repository at C:\Projects\MyApp
-dotnet run -- "C:\Projects\MyApp"
-
-# Or use the default path
 dotnet run
 ```
 
-During indexing, the console prints each file being processed and each chunk being upserted:
+This launches the interactive menu:
+
+```
+┌──────────────────────────────────┐
+│     UEFA RAG Indexer             │
+├──────────────────────────────────┤
+│  Run    - Index a repository     │
+│  List   - List all collections   │
+│  Clean  - Delete the collection  │
+│  Logs   - View live log stream   │
+│  Exit                            │
+└──────────────────────────────────┘
+```
+
+You can also use CLI arguments for non-interactive use:
+
+```powershell
+# Index a repository
+dotnet run -- run "C:\Projects\MyApp"
+
+# List Qdrant collections
+dotnet run -- list
+
+# Delete the Qdrant collection
+dotnet run -- clean
+```
+
+### First Run (Full Index)
 
 ```
 Scanning: C:\Projects\MyApp
@@ -245,17 +307,28 @@ Processing: C:\Projects\MyApp\src\Services\IndexingService.cs
 Processing: C:\Projects\MyApp\README.md
   Indexed document: README.md
 ...
-Completed. Indexed 142 chunks.
+Completed. Indexed 142 chunks (50 files processed, 0 files removed, 0 files unchanged).
 ```
 
-### Run a Semantic Search
+### Second Run (Delta — No Changes)
 
-The `SearchService` is a standalone component (not wired into `Program.cs` yet). To test search functionality, create a temporary script or use the .NET Interactive console:
-
-```powershell
-# Example: quick search via dotnet-script or a temporary console snippet
-# (SearchService is ready for integration in your own entry point)
 ```
+Completed. Indexed 0 chunks (0 files processed, 0 files removed, 50 files unchanged).
+```
+
+### After Editing a File
+
+```
+Processing: C:\Projects\MyApp\src\Services\IndexingService.cs
+  Indexed class: IndexingService
+  Indexed method: IndexAsync
+  ...
+Completed. Indexed 6 chunks (1 file processed, 0 files removed, 49 files unchanged).
+```
+
+### Live Log Stream
+
+Select "Logs" from the menu, choose a minimum log level, and watch real-time log output. Press Q or Esc to stop and return to the menu.
 
 ---
 
@@ -282,11 +355,30 @@ packages/
 appsettings.Development.json
 ```
 
+### `.ragindex-state.json`
+
+This file is auto-generated in the root folder being indexed. It tracks content hashes and timestamps for every indexed file. **Do not commit this file** — it is already in `.gitignore`.
+
+Delete it if you want to force a full re-index on the next run.
+
 ### Supported File Extensions
 
 Defined in `RepositoryScanner.cs`:
 
 `.cs`, `.csproj`, `.sln`, `.json`, `.yaml`, `.yml`, `.xml`, `.config`, `.sql`, `.md`
+
+---
+
+## How Incremental Indexing Works
+
+1. **State file** (`.ragindex-state.json`) stores a SHA-256 hash for each indexed file.
+2. On each run, the indexer computes the delta:
+   - **New files** → not in state → indexed.
+   - **Modified files** → hash mismatch → old points deleted → re-indexed.
+   - **Deleted files** → in state but not on disk → points removed from Qdrant.
+   - **Unchanged files** → hash matches → skipped entirely.
+3. State is saved **after every file**, so Ctrl+C or a crash only loses the current file's work.
+4. If the Qdrant collection is deleted (e.g. via "Clean"), the state file is automatically discarded and a full re-index is performed.
 
 ---
 
