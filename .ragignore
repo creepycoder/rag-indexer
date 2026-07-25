@@ -1,0 +1,54 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+.nx/
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.cache
+
+# Packages
+packages/
+*.nupkg
+
+# Test artifacts
+TestResults/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+
+# Generated files
+*.Designer.cs
+*.g.cs
+*.generated.cs
+
+# Config secrets
+appsettings.Development.json
+appsettings.*.local.json
+*.pfx
+*.cer
+
+# Large files
+*.zip
+*.7z
+*.dll
+*.exe
