@@ -28,6 +28,12 @@ public class IndexingService
     {
         Log.Info("Indexer", $"Scanning: {rootFolder}");
 
+        if (!await _qdrant.IsAvailableAsync())
+        {
+            Log.Error("Indexer", "Qdrant is not available. Ensure Qdrant is running and try again.");
+            return;
+        }
+
         var collectionWasCreated = await _qdrant.EnsureCollectionExistsAsync();
 
         _ignore = new RagIgnore(rootFolder);

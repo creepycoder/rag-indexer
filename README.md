@@ -6,6 +6,15 @@ A **.NET 10 console application** that indexes source code repositories into a v
 
 ## What's New
 
+### v6 — Graceful Configuration Handling
+
+| Feature | Description |
+|---------|-------------|
+| **Optional `appsettings.json`** | The application no longer crashes if `appsettings.json` is missing. Falls back to environment variables and defaults. |
+| **Malformed JSON Recovery** | If `appsettings.json` contains invalid JSON, the error is displayed and the app falls back to environment variables and defaults. |
+| **Graceful Config Degradation** | All `EmbeddingOptions` have sensible defaults (`ollama` provider, `localhost:11434` base URL), so indexing can proceed without any configuration file. |
+| **Environment Variable Priority** | Environment variables (via `__` separator, e.g. `Embedding__Provider`) always override JSON values, matching standard .NET configuration behavior. |
+
 ### v5 — Configurable Embedding Providers
 
 | Feature | Description |
@@ -71,6 +80,7 @@ A **.NET 10 console application** that indexes source code repositories into a v
 - **Interactive Console UI** – Arrow-key menu navigation, status spinners, graceful exit on Ctrl+C or Esc.
 - **Pluggable Embeddings** – `IEmbeddingService` abstraction with Ollama (local) and Azure OpenAI (cloud) implementations.
 - **JSON Configuration** – `appsettings.json` with environment variable overlay. Standard .NET options pattern.
+- **Optional Configuration** – `appsettings.json` is optional. Falls back to environment variables and defaults if missing or malformed.
 - **Incremental (Delta) Indexing** – Only processes files that have changed since the last run. State tracked via `.ragindex-state.json`.
 - **Interrupt-Resilient** – State saved after every file. Crash recovery resumes from the last fully-processed file.
 - **Repository Scanning** – Recursively walks a folder, filtering by supported extensions and respecting `.ragignore` patterns.
@@ -212,7 +222,7 @@ UEFA.Rag.Indexer/
 
 ### `appsettings.json`
 
-The application reads from `appsettings.json` with environment variable overlay. The `Embedding` section controls which provider is used:
+`appsettings.json` is **optional**. If missing or malformed, the application falls back to environment variables and defaults. The `Embedding` section controls which provider is used:
 
 ```json
 {

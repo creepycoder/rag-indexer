@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using Spectre.Console;
 using UEFA.Rag.Indexer.Models;
 using UEFA.Rag.Indexer.Services;
@@ -6,11 +7,23 @@ using UEFA.Rag.Indexer.Services.Configuration;
 
 Console.Title = "UEFA RAG Indexer";
 
-var configuration = new ConfigurationBuilder()
-    .SetBasePath(AppContext.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-    .AddEnvironmentVariables()
-    .Build();
+IConfigurationRoot configuration;
+try
+{
+    configuration = new ConfigurationBuilder()
+        .SetBasePath(AppContext.BaseDirectory)
+        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+        .AddEnvironmentVariables()
+        .Build();
+}
+catch (JsonException ex)
+{
+    AnsiConsole.MarkupLine($"[red]Invalid appsettings.json: {ex.Message}[/]");
+    AnsiConsole.MarkupLine("[yellow]Falling back to environment variables and defaults.[/]");
+    configuration = new ConfigurationBuilder()
+        .AddEnvironmentVariables()
+        .Build();
+}
 
 var embeddingOptions = configuration
     .GetSection(EmbeddingOptions.SectionName)
@@ -153,6 +166,7 @@ static async Task ListAsync()
     if (collections.Count == 0)
     {
         AnsiConsole.MarkupLine("[grey](no collections found)[/]");
+        AnsiConsole.MarkupLine("[yellow]If Qdrant is not running, start it and try again.[/]");
     }
     else
     {
@@ -171,13 +185,20 @@ static async Task CleanAsync()
 {
     var qdrant = new QdrantService();
 
-    await AnsiConsole.Status()
-        .Spinner(Spinner.Known.Dots)
-        .SpinnerStyle(Style.Parse("red"))
-        .StartAsync("Deleting collection...", async ctx =>
-        {
-            await qdrant.DeleteCollectionAsync();
-        });
+    try
+    {
+        await AnsiConsole.Status()
+            .Spinner(Spinner.Known.Dots)
+            .SpinnerStyle(Style.Parse("red"))
+            .StartAsync("Deleting collection...", async ctx =>
+            {
+                await qdrant.DeleteCollectionAsync();
+            });
+    }
+    catch (Exception ex)
+    {
+        AnsiConsole.MarkupLine($"[red]Failed to delete collection: {ex.Message}[/]");
+    }
 }
 
 static async Task RunMenuAsync(EmbeddingOptions embeddingOptions)
@@ -232,6 +253,12 @@ static async Task InfoAsync(string collectionName)
         {
             return await qdrant.GetCollectionInfoAsync(collectionName);
         });
+
+    if (info is null)
+    {
+        AnsiConsole.MarkupLine("[red]Could not retrieve collection info. Ensure Qdrant is running.[/]");
+        return;
+    }
 
     var table = new Table()
         .AddColumn("Property")

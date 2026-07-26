@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using UEFA.Rag.Indexer.Services.Configuration;
 
@@ -21,19 +22,39 @@ public class AzureOpenAiEmbeddingService : IEmbeddingService
         _options = options;
     }
 
+    private static readonly LogStream Log = LogStream.Instance;
+
     public async Task<float[]> CreateAsync(string text)
     {
-        var url = $"{_options.Endpoint.TrimEnd('/')}/openai/deployments/{_options.DeploymentName}/embeddings?api-version=2024-02-01";
+        try
+        {
+            var url = $"{_options.Endpoint.TrimEnd('/')}/openai/deployments/{_options.DeploymentName}/embeddings?api-version=2024-02-01";
 
-        var request = new HttpRequestMessage(HttpMethod.Post, url);
-        request.Headers.Add("api-key", _options.Key);
-        request.Content = JsonContent.Create(new { input = text });
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            request.Headers.Add("api-key", _options.Key);
+            request.Content = JsonContent.Create(new { input = text });
 
-        var response = await _http.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+            var response = await _http.SendAsync(request);
+            response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<AzureEmbeddingResponse>();
-        return result!.Data[0].Embedding;
+            var result = await response.Content.ReadFromJsonAsync<AzureEmbeddingResponse>();
+            return result!.Data[0].Embedding;
+        }
+        catch (HttpRequestException ex)
+        {
+            Log.Error("AzureOpenAI", $"Cannot connect to Azure OpenAI at {_options.Endpoint}.", ex.ToString());
+            throw;
+        }
+        catch (TaskCanceledException ex)
+        {
+            Log.Error("AzureOpenAI", $"Connection to Azure OpenAI at {_options.Endpoint} timed out.", ex.ToString());
+            throw;
+        }
+        catch (JsonException ex)
+        {
+            Log.Error("AzureOpenAI", $"Invalid response from Azure OpenAI at {_options.Endpoint}.", ex.ToString());
+            throw;
+        }
     }
 
     private class AzureEmbeddingResponse

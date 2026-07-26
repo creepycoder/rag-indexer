@@ -9,121 +9,174 @@ public class QdrantService
     private static readonly LogStream Log = LogStream.Instance;
 
     private readonly QdrantClient _client;
+    private readonly string _host;
+    private readonly int _port;
 
     public QdrantService()
     {
-        var host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
+        _host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
         var portStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
-        var port = int.TryParse(portStr, out var p) ? p : 6334;
-        _client = new QdrantClient(host, port);
+        _port = int.TryParse(portStr, out var p) ? p : 6334;
+        _client = new QdrantClient(_host, _port);
     }
 
 
     private const string CollectionName = "uefa_code";
 
-    /// <summary>
-    /// Ensures the collection exists. Returns true if the collection was just created.
-    /// </summary>
+    public async Task<bool> IsAvailableAsync()
+    {
+        try
+        {
+            await _client.ListCollectionsAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     public async Task<bool> EnsureCollectionExistsAsync()
     {
-        var collections = await _client.ListCollectionsAsync();
-
-        if (!collections.Contains(CollectionName))
+        try
         {
-            await _client.CreateCollectionAsync(
-                CollectionName,
-                new VectorParams
-                {
-                    Size = 1024,
-                    Distance = Distance.Cosine
-                });
+            var collections = await _client.ListCollectionsAsync();
 
-            Log.Info("Qdrant", $"Created collection '{CollectionName}'.");
-            return true; // was just created — state is stale
+            if (!collections.Contains(CollectionName))
+            {
+                await _client.CreateCollectionAsync(
+                    CollectionName,
+                    new VectorParams
+                    {
+                        Size = 1024,
+                        Distance = Distance.Cosine
+                    });
+
+                Log.Info("Qdrant", $"Created collection '{CollectionName}'.");
+                return true;
+            }
+
+            return false;
         }
-
-        return false; // already existed
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", $"Cannot connect to Qdrant at {_host}:{_port}. Ensure Qdrant is running.", ex.ToString());
+            return false;
+        }
     }
 
     public async Task InsertAsync(
         CodeChunk chunk,
         float[] vector)
     {
-        await _client.UpsertAsync(
-            CollectionName,
-            new[]
-            {
-                new PointStruct
+        try
+        {
+            await _client.UpsertAsync(
+                CollectionName,
+                new[]
                 {
-                    Id = new PointId
+                    new PointStruct
                     {
-                        Uuid = chunk.Id
-                    },
-                    Vectors = vector,
-                    Payload =
-                    {
-                        ["project"] = chunk.Project,
-                        ["file"] = chunk.FilePath,
-                        ["type"] = chunk.SymbolType,
-                        ["symbol"] = chunk.SymbolName,
-                        ["namespace"] = chunk.Namespace,
-                        ["content"] = chunk.Content
+                        Id = new PointId
+                        {
+                            Uuid = chunk.Id
+                        },
+                        Vectors = vector,
+                        Payload =
+                        {
+                            ["project"] = chunk.Project,
+                            ["file"] = chunk.FilePath,
+                            ["type"] = chunk.SymbolType,
+                            ["symbol"] = chunk.SymbolName,
+                            ["namespace"] = chunk.Namespace,
+                            ["content"] = chunk.Content
+                        }
                     }
-                }
-            });
+                });
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", $"Failed to insert chunk '{chunk.SymbolName}' for {chunk.FilePath}", ex.ToString());
+        }
     }
 
-    /// <summary>
-    /// Deletes all points whose file path starts with the given prefix.
-    /// Used to remove chunks from deleted or renamed files during delta indexing.
-    /// </summary>
     public async Task DeleteByFilePathAsync(string filePath)
     {
-        await _client.DeleteAsync(
-            CollectionName,
-            new Filter
-            {
-                Must =
+        try
+        {
+            await _client.DeleteAsync(
+                CollectionName,
+                new Filter
                 {
-                    new Condition
+                    Must =
                     {
-                        Field = new FieldCondition
+                        new Condition
                         {
-                            Key = "file",
-                            Match = new Match
+                            Field = new FieldCondition
                             {
-                                Text = filePath
+                                Key = "file",
+                                Match = new Match
+                                {
+                                    Text = filePath
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
 
-        Log.Info("Qdrant", $"Deleted points for: {filePath}");
+            Log.Info("Qdrant", $"Deleted points for: {filePath}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", $"Failed to delete points for: {filePath}", ex.ToString());
+        }
     }
 
     public async Task DeleteCollectionAsync()
     {
-        var collections = await _client.ListCollectionsAsync();
-
-        if (!collections.Contains(CollectionName))
+        try
         {
-            Log.Warning("Qdrant", $"Collection '{CollectionName}' does not exist. Nothing to delete.");
-            return;
-        }
+            var collections = await _client.ListCollectionsAsync();
 
-        await _client.DeleteCollectionAsync(CollectionName);
-        Log.Info("Qdrant", $"Collection '{CollectionName}' deleted successfully.");
+            if (!collections.Contains(CollectionName))
+            {
+                Log.Warning("Qdrant", $"Collection '{CollectionName}' does not exist. Nothing to delete.");
+                return;
+            }
+
+            await _client.DeleteCollectionAsync(CollectionName);
+            Log.Info("Qdrant", $"Collection '{CollectionName}' deleted successfully.");
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", $"Failed to delete collection '{CollectionName}'", ex.ToString());
+        }
     }
 
     public async Task<List<string>> ListCollectionsAsync()
     {
-        var collections = await _client.ListCollectionsAsync();
-        return [.. collections];
+        try
+        {
+            var collections = await _client.ListCollectionsAsync();
+            return [.. collections];
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", "Failed to list collections", ex.ToString());
+            return [];
+        }
     }
 
-    public async Task<CollectionInfo> GetCollectionInfoAsync(string name)
+    public async Task<CollectionInfo?> GetCollectionInfoAsync(string name)
     {
-        return await _client.GetCollectionInfoAsync(name);
+        try
+        {
+            return await _client.GetCollectionInfoAsync(name);
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Qdrant", $"Failed to get collection info for '{name}'", ex.ToString());
+            return null;
+        }
     }
 }
