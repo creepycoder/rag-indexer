@@ -33,12 +33,59 @@ public class EmbeddingCacheService
 
     /// <summary>
     /// Computes a SHA-256 hash of the content for cache keying.
+    /// Uses spans to avoid intermediate string allocations from Replace().
     /// </summary>
     public static string ComputeContentHash(string content)
     {
-        var normalized = content.Replace("\r\n", "\n");
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(normalized));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        // Normalize line endings: replace \r\n with \n
+        // Use spans to avoid intermediate string allocations from Replace()
+        var hasR = content.AsSpan().IndexOf('\r');
+
+        if (hasR >= 0)
+        {
+            // Build normalized content without \r characters using stackalloc for small content
+            Span<char> buffer = content.Length <= 4096
+                ? stackalloc char[content.Length]
+                : new char[content.Length];
+
+            var writePos = 0;
+            foreach (var c in content)
+            {
+                if (c != '\r')
+                    buffer[writePos++] = c;
+            }
+
+            var normalized = buffer[..writePos];
+
+            // Encode to UTF-8
+            var maxByteCount = Encoding.UTF8.GetMaxByteCount(normalized.Length);
+            Span<byte> utf8Bytes = maxByteCount <= 4096
+                ? stackalloc byte[maxByteCount]
+                : new byte[maxByteCount];
+
+            var actualByteCount = Encoding.UTF8.GetBytes(normalized, utf8Bytes);
+
+            // Hash directly from the span
+            Span<byte> hashBytes = stackalloc byte[SHA256.HashSizeInBytes];
+            SHA256.HashData(utf8Bytes[..actualByteCount], hashBytes);
+
+            return Convert.ToHexStringLower(hashBytes);
+        }
+        else
+        {
+            // No \r characters, hash directly from the original string
+            var maxByteCount = Encoding.UTF8.GetMaxByteCount(content.Length);
+            Span<byte> utf8Bytes = maxByteCount <= 4096
+                ? stackalloc byte[maxByteCount]
+                : new byte[maxByteCount];
+
+            var actualByteCount = Encoding.UTF8.GetBytes(content.AsSpan(), utf8Bytes);
+
+            Span<byte> hashBytes = stackalloc byte[SHA256.HashSizeInBytes];
+            SHA256.HashData(utf8Bytes[..actualByteCount], hashBytes);
+
+            return Convert.ToHexStringLower(hashBytes);
+        }
     }
 
     /// <summary>

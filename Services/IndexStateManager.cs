@@ -71,18 +71,60 @@ public class IndexStateManager
 
     /// <summary>
     /// Computes a hash of the file content. Uses SHA-256 of the normalized content.
+    /// Uses spans to avoid intermediate string and byte array allocations.
     /// </summary>
     public static string ComputeFileHash(string filePath)
     {
         var content = File.ReadAllText(filePath);
 
         // Normalize line endings to avoid false positives from CRLF vs LF
-        var normalized = content.Replace("\r\n", "\n");
+        // Uses spans to avoid allocating a new string from Replace()
+        var hasR = content.AsSpan().IndexOf('\r');
 
-        var bytes = Encoding.UTF8.GetBytes(normalized);
-        var hash = SHA256.HashData(bytes);
+        if (hasR >= 0)
+        {
+            Span<char> buffer = content.Length <= 4096
+                ? stackalloc char[content.Length]
+                : new char[content.Length];
 
-        return Convert.ToHexString(hash).ToLowerInvariant();
+            var writePos = 0;
+            foreach (var c in content)
+            {
+                if (c != '\r')
+                    buffer[writePos++] = c;
+            }
+
+            var normalized = buffer[..writePos];
+
+            // Encode to UTF-8 using a buffer
+            var maxByteCount = Encoding.UTF8.GetMaxByteCount(normalized.Length);
+            Span<byte> utf8Bytes = maxByteCount <= 4096
+                ? stackalloc byte[maxByteCount]
+                : new byte[maxByteCount];
+
+            var actualByteCount = Encoding.UTF8.GetBytes(normalized, utf8Bytes);
+
+            // Hash directly from the span
+            Span<byte> hashBytes = stackalloc byte[SHA256.HashSizeInBytes];
+            SHA256.HashData(utf8Bytes[..actualByteCount], hashBytes);
+
+            return Convert.ToHexStringLower(hashBytes);
+        }
+        else
+        {
+            // No normalization needed
+            var maxByteCount = Encoding.UTF8.GetMaxByteCount(content.Length);
+            Span<byte> utf8Bytes = maxByteCount <= 4096
+                ? stackalloc byte[maxByteCount]
+                : new byte[maxByteCount];
+
+            var actualByteCount = Encoding.UTF8.GetBytes(content.AsSpan(), utf8Bytes);
+
+            Span<byte> hashBytes = stackalloc byte[SHA256.HashSizeInBytes];
+            SHA256.HashData(utf8Bytes[..actualByteCount], hashBytes);
+
+            return Convert.ToHexStringLower(hashBytes);
+        }
     }
 
     /// <summary>

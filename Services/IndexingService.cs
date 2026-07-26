@@ -190,9 +190,11 @@ public class IndexingService
         string root,
         string file)
     {
-        var relative = Path.GetRelativePath(root, file);
+        var relative = Path.GetRelativePath(root, file).AsSpan();
+        var sep = Path.DirectorySeparatorChar;
 
-        return relative.Split(Path.DirectorySeparatorChar)[0];
+        var idx = relative.IndexOf(sep);
+        return idx >= 0 ? relative[..idx].ToString() : relative.ToString();
     }
 
     private static bool IsSupportedFile(string file)

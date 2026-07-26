@@ -154,9 +154,20 @@ public class BackupService
 
     private static string ExtractProject(string filePath)
     {
-        // Try to extract the project name from the file path
-        var parts = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return parts.Length > 0 ? parts[0] : "unknown";
+        // Try to extract the project name from the file path using span
+        var span = filePath.AsSpan();
+        var sep1 = Path.DirectorySeparatorChar;
+        var sep2 = Path.AltDirectorySeparatorChar;
+
+        for (var i = 0; i < span.Length; i++)
+        {
+            if (span[i] == sep1 || span[i] == sep2)
+            {
+                return span[..i].ToString();
+            }
+        }
+
+        return span.Length > 0 ? span.ToString() : "unknown";
     }
 }
 
