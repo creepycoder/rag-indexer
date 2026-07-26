@@ -1,4 +1,4 @@
-namespace UEFA.Rag.Indexer.Models;
+namespace Rag.Indexer.Models;
 
 public enum LogLevel
 {

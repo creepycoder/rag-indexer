@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace UEFA.Rag.Indexer.Models;
+namespace Rag.Indexer.Models;
 
 public class IndexState
 {

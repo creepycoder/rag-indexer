@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using UEFA.Rag.Indexer.Models;
+using Rag.Indexer.Models;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 /// <summary>
 /// Singleton log stream that collects structured log entries

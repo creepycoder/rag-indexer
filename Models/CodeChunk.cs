@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace UEFA.Rag.Indexer.Models;
+namespace Rag.Indexer.Models;
 
 public class CodeChunk
 {

@@ -2,7 +2,7 @@ using Qdrant.Client;
 using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public class SearchService
 {

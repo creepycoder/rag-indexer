@@ -1,8 +1,8 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using UEFA.Rag.Indexer.Services.Configuration;
+using Rag.Indexer.Services.Configuration;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public class OllamaEmbeddingService : IEmbeddingService
 {

@@ -1,9 +1,9 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using UEFA.Rag.Indexer.Services.Configuration;
+using Rag.Indexer.Services.Configuration;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public class AzureOpenAiEmbeddingService : IEmbeddingService
 {

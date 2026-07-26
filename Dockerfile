@@ -5,7 +5,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # restore with the project file first (layer caching)
-COPY UEFA.Rag.Indexer.csproj .
+COPY Rag.Indexer.csproj .
 RUN dotnet restore
 
 # copy everything else and publish
@@ -23,4 +23,4 @@ COPY --from=build /app .
 # as a volume at /repo (default) or override with --volume
 VOLUME ["/repo"]
 
-ENTRYPOINT ["dotnet", "UEFA.Rag.Indexer.dll"]
+ENTRYPOINT ["dotnet", "Rag.Indexer.dll"]

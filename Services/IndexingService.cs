@@ -1,6 +1,6 @@
-using UEFA.Rag.Indexer.Models;
+using Rag.Indexer.Models;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public class IndexingService
 {

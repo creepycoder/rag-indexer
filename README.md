@@ -1,4 +1,4 @@
-# UEFA.Rag.Indexer
+# Rag.Indexer
 
 A **.NET 10 console application** that indexes source code repositories into a vector database for Retrieval-Augmented Generation (RAG) workflows. It parses C# code into semantic chunks (classes and methods), generates vector embeddings via Ollama or Azure OpenAI, and stores them in Qdrant for semantic search.
 
@@ -135,12 +135,12 @@ A **.NET 10 console application** that indexes source code repositories into a v
 ## Project Structure
 
 ```
-UEFA.Rag.Indexer/
+Rag.Indexer/
 ├── appsettings.json                 # Application configuration (embedding provider, etc.)
 ├── Dockerfile                       # Multi-stage container build
 ├── podman-compose.yml               # Podman Compose orchestration (Qdrant + indexer)
 ├── Program.cs                       # Entry point (interactive menu)
-├── UEFA.Rag.Indexer.csproj          # .NET 10 project file
+├── Rag.Indexer.csproj               # .NET 10 project file
 ├── .ragignore                       # Ignore patterns (gitignore-style)
 ├── .ragindex-state.json             # Auto-generated index state (do not commit)
 ├── README.md                        # This file
@@ -379,7 +379,7 @@ docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant
 ```powershell
 # Clone the repository
 git clone <repo-url>
-cd UEFA.Rag.Indexer
+cd Rag.Indexer
 
 # Restore dependencies and build
 dotnet build
@@ -395,7 +395,7 @@ This launches the interactive menu:
 
 ```
 ┌──────────────────────────────────┐
-│     UEFA RAG Indexer             │
+│     RAG Indexer                  │
 ├──────────────────────────────────┤
 │  Run    - Index a repository     │
 │  List   - List all collections   │

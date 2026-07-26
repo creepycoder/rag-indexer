@@ -1,6 +1,6 @@
 using Microsoft.Extensions.FileSystemGlobbing;
 
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public sealed class RagIgnore
 {

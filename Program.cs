@@ -1,11 +1,11 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Spectre.Console;
-using UEFA.Rag.Indexer.Models;
-using UEFA.Rag.Indexer.Services;
-using UEFA.Rag.Indexer.Services.Configuration;
+using Rag.Indexer.Models;
+using Rag.Indexer.Services;
+using Rag.Indexer.Services.Configuration;
 
-Console.Title = "UEFA RAG Indexer";
+Console.Title = "RAG Indexer";
 
 IConfigurationRoot configuration;
 try
@@ -71,7 +71,7 @@ while (true)
         return;
     }
 
-    AnsiConsole.Write(new Rule("[yellow]UEFA RAG Indexer[/]").RuleStyle("grey"));
+    AnsiConsole.Write(new Rule("[yellow]RAG Indexer[/]").RuleStyle("grey"));
     AnsiConsole.WriteLine();
 
     var choice = AnsiConsole.Prompt(

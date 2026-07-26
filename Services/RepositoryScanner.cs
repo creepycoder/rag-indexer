@@ -1,4 +1,4 @@
-namespace UEFA.Rag.Indexer.Services;
+namespace Rag.Indexer.Services;
 
 public class RepositoryScanner
 {

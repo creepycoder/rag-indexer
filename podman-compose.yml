@@ -1,11 +1,11 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# podman-compose.yml  –  Qdrant vector database for UEFA.Rag.Indexer
+# podman-compose.yml  –  Qdrant vector database for Rag.Indexer
 #
 # Usage:
 #   podman-compose up -d          # start Qdrant
 #   podman-compose down           # stop Qdrant
 #
-# The console app (UEFA.Rag.Indexer) connects to Qdrant via localhost:6334
+# The console app (Rag.Indexer) connects to Qdrant via localhost:6334
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:

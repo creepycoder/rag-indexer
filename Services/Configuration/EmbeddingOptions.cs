@@ -1,4 +1,4 @@
-namespace UEFA.Rag.Indexer.Services.Configuration;
+namespace Rag.Indexer.Services.Configuration;
 
 public class EmbeddingOptions
 {
