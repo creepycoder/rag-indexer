@@ -11,16 +11,18 @@ public class IndexingService
     private readonly IEmbeddingService _embedding;
     private readonly QdrantService _qdrant;
     private readonly IndexStateManager _stateManager;
+    private readonly EmbeddingCacheService _cache;
     private RagIgnore? _ignore;
 
 
-    public IndexingService(IEmbeddingService embedding)
+    public IndexingService(IEmbeddingService embedding, EmbeddingCacheService? cache = null)
     {
         _scanner = new RepositoryScanner();
         _parser = new CSharpCodeParser();
         _embedding = embedding;
         _qdrant = new QdrantService();
         _stateManager = new IndexStateManager();
+        _cache = cache ?? new EmbeddingCacheService();
     }
 
 
@@ -107,13 +109,27 @@ public class IndexingService
                     // Compute deterministic ID for upsert deduplication
                     chunk.ComputeDeterministicId();
 
-                    var vector = await _embedding.CreateAsync(chunk.Content);
+                    // Check embedding cache first
+                    var contentHash = EmbeddingCacheService.ComputeContentHash(chunk.Content);
+                    var cached = _cache.Get(contentHash);
+
+                    float[] vector;
+                    if (cached is not null)
+                    {
+                        vector = cached.Embedding;
+                        Log.Info("Indexer", $"  Using cached embedding for {chunk.SymbolType}: {chunk.SymbolName}");
+                    }
+                    else
+                    {
+                        vector = await _embedding.CreateAsync(chunk.Content);
+
+                        // Store in cache for future use
+                        _cache.Set(contentHash, vector, chunk.FilePath, chunk.SymbolType, chunk.SymbolName);
+                        Log.Info("Indexer", $"  Indexed {chunk.SymbolType}: {chunk.SymbolName}");
+                    }
 
                     await _qdrant.InsertAsync(chunk, vector);
-
                     count++;
-
-                    Log.Info("Indexer", $"  Indexed {chunk.SymbolType}: {chunk.SymbolName}");
                 }
 
                 // Update state for this file

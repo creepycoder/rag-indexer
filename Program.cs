@@ -59,6 +59,24 @@ if (cmdArgs.Length > 1)
         case "delete-collection":
             await CleanAsync();
             return;
+        case "backup" when cmdArgs.Length > 2:
+            await BackupAsync(cmdArgs[2]);
+            return;
+        case "restore" when cmdArgs.Length > 2:
+            await RestoreAsync(cmdArgs[2]);
+            return;
+        case "snapshot":
+            await SnapshotAsync();
+            return;
+        case "snapshots":
+            await ListSnapshotsAsync();
+            return;
+        case "cache":
+            await CacheInfoAsync();
+            return;
+        case "cache-clear":
+            await CacheClearAsync();
+            return;
     }
 }
 
@@ -80,26 +98,46 @@ while (true)
             .PageSize(10)
             .MoreChoicesText("[grey](Move up and down to reveal more options)[/]")
             .AddChoices([
-                "Run    - Index a repository folder",
-                "List   - List all Qdrant collections",
-                "Info   - Collection details",
-                "Clean  - Delete the Qdrant collection",
+                "Run     - Index a repository folder",
+                "List    - List all Qdrant collections",
+                "Info    - Collection details",
+                "Backup  - Export all points to JSON",
+                "Restore - Restore collection from JSON backup",
+                "Snapshot - Create a Qdrant snapshot",
+                "Snapshots - List Qdrant snapshots",
+                "Cache   - Show embedding cache info",
+                "Clean   - Delete the Qdrant collection",
                 "Exit"
             ])
             .HighlightStyle(new Style(foreground: Color.Cyan1, decoration: Decoration.Bold)));
 
     switch (choice)
     {
-        case "Run    - Index a repository folder":
+        case "Run     - Index a repository folder":
             await RunMenuAsync(embeddingOptions);
             break;
-        case "List   - List all Qdrant collections":
+        case "List    - List all Qdrant collections":
             await ListMenuAsync();
             break;
-        case "Info   - Collection details":
+        case "Info    - Collection details":
             await InfoMenuAsync();
             break;
-        case "Clean  - Delete the Qdrant collection":
+        case "Backup  - Export all points to JSON":
+            await BackupMenuAsync();
+            break;
+        case "Restore - Restore collection from JSON backup":
+            await RestoreMenuAsync();
+            break;
+        case "Snapshot - Create a Qdrant snapshot":
+            await SnapshotMenuAsync();
+            break;
+        case "Snapshots - List Qdrant snapshots":
+            await ListSnapshotsMenuAsync();
+            break;
+        case "Cache   - Show embedding cache info":
+            await CacheMenuAsync();
+            break;
+        case "Clean   - Delete the Qdrant collection":
             await CleanMenuAsync();
             break;
         case "Exit":
@@ -201,6 +239,147 @@ static async Task CleanAsync()
     }
 }
 
+static async Task BackupAsync(string outputPath)
+{
+    var backup = new BackupService();
+
+    var count = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Exporting all points to JSON...", async ctx =>
+        {
+            return await backup.ExportToJsonAsync(outputPath);
+        });
+
+    if (count > 0)
+    {
+        AnsiConsole.MarkupLine($"[green]Exported {count} points to:[/] {outputPath}");
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[yellow]No points were exported. Check if the collection has data.[/]");
+    }
+}
+
+static async Task RestoreAsync(string inputPath)
+{
+    var backup = new BackupService();
+
+    var count = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Restoring points from JSON backup...", async ctx =>
+        {
+            return await backup.RestoreFromJsonAsync(inputPath);
+        });
+
+    if (count > 0)
+    {
+        AnsiConsole.MarkupLine($"[green]Restored {count} points from:[/] {inputPath}");
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[yellow]No points were restored. Check the backup file.[/]");
+    }
+}
+
+static async Task SnapshotAsync()
+{
+    var snapshotService = new QdrantSnapshotService();
+
+    var name = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Creating Qdrant snapshot...", async ctx =>
+        {
+            return await snapshotService.CreateSnapshotAsync();
+        });
+
+    if (name is not null)
+    {
+        AnsiConsole.MarkupLine($"[green]Snapshot created:[/] {name}");
+        AnsiConsole.MarkupLine($"[grey]Download URL:[/] {snapshotService.GetSnapshotDownloadUrl(name)}");
+    }
+    else
+    {
+        AnsiConsole.MarkupLine("[red]Failed to create snapshot. Ensure Qdrant is running on port 6333.[/]");
+    }
+}
+
+static async Task ListSnapshotsAsync()
+{
+    var snapshotService = new QdrantSnapshotService();
+
+    var snapshots = await AnsiConsole.Status()
+        .Spinner(Spinner.Known.Dots)
+        .SpinnerStyle(Style.Parse("green"))
+        .StartAsync("Fetching snapshots...", async ctx =>
+        {
+            return await snapshotService.ListSnapshotsAsync();
+        });
+
+    AnsiConsole.Write(new Rule("[yellow]Qdrant Snapshots[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    if (snapshots.Count == 0)
+    {
+        AnsiConsole.MarkupLine("[grey](no snapshots found)[/]");
+    }
+    else
+    {
+        var table = new Table()
+            .AddColumn("Name")
+            .AddColumn("Size")
+            .AddColumn("Created");
+
+        foreach (var snap in snapshots)
+        {
+            var size = snap.Size.HasValue
+                ? FormatSize(snap.Size.Value)
+                : "N/A";
+            var created = snap.CreationTime?.ToString("yyyy-MM-dd HH:mm:ss") ?? "N/A";
+
+            table.AddRow(snap.Name, size, created);
+        }
+
+        AnsiConsole.Write(table);
+    }
+
+    AnsiConsole.WriteLine();
+}
+
+static async Task CacheInfoAsync()
+{
+    var cache = new EmbeddingCacheService();
+
+    var count = cache.Count();
+    var sizeBytes = cache.GetCacheSizeBytes();
+    var cacheDir = cache.CacheDirectory;
+
+    AnsiConsole.Write(new Rule("[yellow]Embedding Cache Info[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var table = new Table()
+        .AddColumn("Property")
+        .AddColumn("Value");
+
+    table.AddRow("Cache directory", cacheDir);
+    table.AddRow("Cached entries", count.ToString("N0"));
+    table.AddRow("Total size", FormatSize(sizeBytes));
+
+    AnsiConsole.Write(table);
+    AnsiConsole.WriteLine();
+}
+
+static async Task CacheClearAsync()
+{
+    var cache = new EmbeddingCacheService();
+    var count = cache.Count();
+
+    cache.Clear();
+    AnsiConsole.MarkupLine($"[green]Cleared {count} cached entries.[/]");
+}
+
 static async Task RunMenuAsync(EmbeddingOptions embeddingOptions)
 {
     AnsiConsole.Write(new Rule("[yellow]Run Indexer[/]").RuleStyle("grey"));
@@ -274,6 +453,100 @@ static async Task InfoAsync(string collectionName)
     AnsiConsole.Write(table);
 }
 
+static async Task BackupMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]Backup Collection to JSON[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var defaultPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+        $"rag-indexer-backup-{DateTime.Now:yyyyMMdd-HHmmss}.json");
+
+    var outputPath = AnsiConsole.Ask("Output path:", defaultPath);
+
+    await BackupAsync(outputPath);
+
+    PressAnyKeyToContinue();
+}
+
+static async Task RestoreMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]Restore Collection from JSON[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var inputPath = AnsiConsole.Ask<string>("Enter the [green]backup file path[/] to restore:");
+
+    if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))
+    {
+        AnsiConsole.MarkupLine("[red]File not found.[/]");
+        PressAnyKeyToContinue();
+        return;
+    }
+
+    await RestoreAsync(inputPath);
+
+    PressAnyKeyToContinue();
+}
+
+static async Task SnapshotMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]Create Qdrant Snapshot[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    await SnapshotAsync();
+
+    PressAnyKeyToContinue();
+}
+
+static async Task ListSnapshotsMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]List Qdrant Snapshots[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    await ListSnapshotsAsync();
+
+    PressAnyKeyToContinue();
+}
+
+static async Task CacheMenuAsync()
+{
+    AnsiConsole.Write(new Rule("[yellow]Embedding Cache[/]").RuleStyle("grey"));
+    AnsiConsole.WriteLine();
+
+    var cache = new EmbeddingCacheService();
+
+    var action = AnsiConsole.Prompt(
+        new SelectionPrompt<string>()
+            .Title("Cache action?")
+            .AddChoices([
+                "Show cache info",
+                "Clear cache",
+                "Back"
+            ]));
+
+    switch (action)
+    {
+        case "Show cache info":
+            await CacheInfoAsync();
+            break;
+        case "Clear cache":
+            var confirmed = AnsiConsole.Confirm("Are you sure you want to clear the embedding cache?");
+            if (confirmed)
+            {
+                await CacheClearAsync();
+            }
+            else
+            {
+                AnsiConsole.MarkupLine("[yellow]Cache clear cancelled.[/]");
+            }
+            break;
+        case "Back":
+            return;
+    }
+
+    PressAnyKeyToContinue();
+}
+
 static async Task CleanMenuAsync()
 {
     AnsiConsole.Write(new Rule("[yellow]Clean Collection[/]").RuleStyle("grey"));
@@ -310,4 +583,15 @@ static void PressAnyKeyToContinue()
     {
         Console.ReadLine();
     }
+}
+
+static string FormatSize(long bytes)
+{
+    return bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):F1} MB",
+        _ => $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB"
+    };
 }
