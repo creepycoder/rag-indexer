@@ -1,8 +1,20 @@
-﻿using Spectre.Console;
+﻿using Microsoft.Extensions.Configuration;
+using Spectre.Console;
 using UEFA.Rag.Indexer.Models;
 using UEFA.Rag.Indexer.Services;
+using UEFA.Rag.Indexer.Services.Configuration;
 
 Console.Title = "UEFA RAG Indexer";
+
+var configuration = new ConfigurationBuilder()
+    .SetBasePath(AppContext.BaseDirectory)
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+    .AddEnvironmentVariables()
+    .Build();
+
+var embeddingOptions = configuration
+    .GetSection(EmbeddingOptions.SectionName)
+    .Get<EmbeddingOptions>() ?? new EmbeddingOptions();
 
 // Ctrl+C → graceful exit
 Console.CancelKeyPress += (sender, e) =>
@@ -20,7 +32,7 @@ if (cmdArgs.Length > 1)
     switch (cmdArgs[1].ToLowerInvariant())
     {
         case "run" when cmdArgs.Length > 2:
-            await RunAsync(cmdArgs[2]);
+            await RunAsync(cmdArgs[2], embeddingOptions);
             return;
         case "list":
             await ListAsync();
@@ -66,7 +78,7 @@ while (true)
     switch (choice)
     {
         case "Run    - Index a repository folder":
-            await RunMenuAsync();
+            await RunMenuAsync(embeddingOptions);
             break;
         case "List   - List all Qdrant collections":
             await ListMenuAsync();
@@ -83,7 +95,7 @@ while (true)
     }
 }
 
-static async Task RunAsync(string folder)
+static async Task RunAsync(string folder, EmbeddingOptions embeddingOptions)
 {
     if (!Directory.Exists(folder))
     {
@@ -91,7 +103,8 @@ static async Task RunAsync(string folder)
         return;
     }
 
-    var indexer = new IndexingService();
+    var embeddingService = GetEmbeddingService(embeddingOptions);
+    var indexer = new IndexingService(embeddingService);
 
     await AnsiConsole.Status()
         .Spinner(Spinner.Known.Dots)
@@ -102,6 +115,24 @@ static async Task RunAsync(string folder)
             await indexer.IndexAsync(folder);
             ctx.Status = "Indexing completed!";
         });
+}
+
+static IEmbeddingService GetEmbeddingService(EmbeddingOptions options)
+{
+    try
+    {
+        return options.Provider.ToLowerInvariant() switch
+        {
+            "azure" => new AzureOpenAiEmbeddingService(options.AzureOpenAi),
+            _ => new OllamaEmbeddingService(options.Ollama)
+        };
+    }
+    catch (InvalidOperationException ex)
+    {
+        AnsiConsole.MarkupLine($"[red]ERROR: {ex.Message}[/]");
+        AnsiConsole.MarkupLine("[yellow]Falling back to OllamaEmbeddingService.[/]");
+        return new OllamaEmbeddingService(options.Ollama);
+    }
 }
 
 static async Task ListAsync()
@@ -149,7 +180,7 @@ static async Task CleanAsync()
         });
 }
 
-static async Task RunMenuAsync()
+static async Task RunMenuAsync(EmbeddingOptions embeddingOptions)
 {
     AnsiConsole.Write(new Rule("[yellow]Run Indexer[/]").RuleStyle("grey"));
     AnsiConsole.WriteLine();
@@ -163,7 +194,7 @@ static async Task RunMenuAsync()
         return;
     }
 
-    await RunAsync(folder);
+    await RunAsync(folder, embeddingOptions);
 
     AnsiConsole.MarkupLine("[green]Indexing completed.[/]");
     PressAnyKeyToContinue();

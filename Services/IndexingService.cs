@@ -8,17 +8,17 @@ public class IndexingService
 
     private readonly RepositoryScanner _scanner;
     private readonly CSharpCodeParser _parser;
-    private readonly EmbeddingService _embedding;
+    private readonly IEmbeddingService _embedding;
     private readonly QdrantService _qdrant;
     private readonly IndexStateManager _stateManager;
     private RagIgnore? _ignore;
 
 
-    public IndexingService()
+    public IndexingService(IEmbeddingService embedding)
     {
         _scanner = new RepositoryScanner();
         _parser = new CSharpCodeParser();
-        _embedding = new EmbeddingService();
+        _embedding = embedding;
         _qdrant = new QdrantService();
         _stateManager = new IndexStateManager();
     }
@@ -36,6 +36,7 @@ public class IndexingService
         var allFiles = _scanner.Scan(rootFolder)
             .Where(x => !_ignore.IsIgnored(rootFolder, x))
             .Where(IsSupportedFile)
+            .Where(x => Path.GetFileName(x) != IndexStateManager.StateFileName)
             .ToList();
 
         // 2. Load previous index state
@@ -91,6 +92,12 @@ public class IndexingService
 
                 foreach (var chunk in chunks)
                 {
+                    if (string.IsNullOrWhiteSpace(chunk.Content))
+                    {
+                        Log.Warning("Indexer", $"  Skipped empty chunk: {chunk.SymbolName}");
+                        continue;
+                    }
+
                     // Compute deterministic ID for upsert deduplication
                     chunk.ComputeDeterministicId();
 

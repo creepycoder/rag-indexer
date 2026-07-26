@@ -9,7 +9,7 @@ public class IndexStateManager
 {
     private static readonly LogStream Log = LogStream.Instance;
 
-    private const string StateFileName = ".ragindex-state.json";
+    public const string StateFileName = ".ragindex-state.json";
 
     /// <summary>
     /// Loads the index state from the state file in the root folder.

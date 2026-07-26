@@ -1,10 +1,24 @@
 # UEFA.Rag.Indexer
 
-A **.NET 10 console application** that indexes source code repositories into a vector database for Retrieval-Augmented Generation (RAG) workflows. It parses C# code into semantic chunks (classes and methods), generates vector embeddings via Ollama, and stores them in Qdrant for semantic search.
+A **.NET 10 console application** that indexes source code repositories into a vector database for Retrieval-Augmented Generation (RAG) workflows. It parses C# code into semantic chunks (classes and methods), generates vector embeddings via Ollama or Azure OpenAI, and stores them in Qdrant for semantic search.
 
 ---
 
 ## What's New
+
+### v5 — Configurable Embedding Providers
+
+| Feature | Description |
+|---------|-------------|
+| **Provider Abstraction** | `IEmbeddingService` interface decouples indexing from any specific embedding backend. |
+| **Ollama (Default)** | `OllamaEmbeddingService` — local inference via `localhost:11434`. |
+| **Azure OpenAI** | `AzureOpenAiEmbeddingService` — cloud embeddings via REST API. |
+| **JSON Configuration** | `appsettings.json` with `Embedding` section. Provider selected via `Embedding:Provider` (`"ollama"` or `"azure"`). |
+| **Strongly-Typed Options** | `EmbeddingOptions`, `OllamaOptions`, `AzureOpenAiOptions` POCOs in `Services/Configuration/`. |
+| **Env Var Overlay** | `IConfiguration` builder reads `appsettings.json` + environment variables (standard .NET pattern). |
+| **Empty Content Skip** | Empty `version.json` / `README.md` files are skipped before sending to the embedding service. |
+| **Empty Embedding Guard** | `OllamaEmbeddingService` now throws a descriptive error instead of `IndexOutOfRangeException`. |
+| **State File Exclusion** | `.ragindex-state.json` is excluded from the scan to prevent cyclic re-indexing. |
 
 ### v4 — Qdrant-Only Compose
 
@@ -34,12 +48,12 @@ A **.NET 10 console application** that indexes source code repositories into a v
 │  ┌───────────────────────────────────────────────────────────────────────────┐   │
 │  │  IndexingService                                                           │   │
 │  │  ┌────────────────┐  ┌──────────────┐  ┌────────────────┐  ┌───────────┐ │   │
-│  │  │ RepositoryScan │→│ CSharpCode   │→│ EmbeddingService│→│ Qdrant    │ │   │
-│  │  │ ner            │  │ Parser       │  │ (Ollama)       │  │ Service   │ │   │
-│  │  └────────────────┘  └──────────────┘  └───────┬────────┘  └───────────┘ │   │
-│  │                                                 │                          │   │
-│  │  ┌──────────────────────────────────────────────┘                          │   │
-│  │  │                                                                         │   │
+│  │  │ RepositoryScan │→│ CSharpCode   │→│ IEmbeddingService│→│ Qdrant    │ │   │
+│  │  │ ner            │  │ Parser       │  │ ┌────────────┐ │  │ Service   │ │   │
+│  │  └────────────────┘  └──────────────┘  │ │ Ollama     │ │  └───────────┘ │   │
+│  │                                         │ │ AzureOpenAI│ │                 │   │
+│  │  ┌───────────────────────────────────────┘ └────────────┘ │                 │   │
+│  │  │                                                         │                 │   │
 │  │  │  IndexStateManager (delta detection via .ragindex-state.json)           │   │
 │  │  └─────────────────────────────────────────────────────────────────────────┘   │
 │  │                                                                                 │
@@ -55,15 +69,17 @@ A **.NET 10 console application** that indexes source code repositories into a v
 ## Features
 
 - **Interactive Console UI** – Arrow-key menu navigation, status spinners, graceful exit on Ctrl+C or Esc.
+- **Pluggable Embeddings** – `IEmbeddingService` abstraction with Ollama (local) and Azure OpenAI (cloud) implementations.
+- **JSON Configuration** – `appsettings.json` with environment variable overlay. Standard .NET options pattern.
 - **Incremental (Delta) Indexing** – Only processes files that have changed since the last run. State tracked via `.ragindex-state.json`.
 - **Interrupt-Resilient** – State saved after every file. Crash recovery resumes from the last fully-processed file.
 - **Repository Scanning** – Recursively walks a folder, filtering by supported extensions and respecting `.ragignore` patterns.
 - **C# Semantic Parsing** – Uses Roslyn (`Microsoft.CodeAnalysis.CSharp`) to parse `.cs` files into two levels of granularity: **class** definitions and **method** definitions.
 - **Document Indexing** – Non-C# files (`.csproj`, `.json`, `.yaml`, `.md`, `.sql`, `.xml`, `.config`, `.sln`) are indexed as whole-document chunks.
-- **Vector Embedding** – Calls [Ollama](https://ollama.com/) hosted at `localhost:11434` using the `mxbai-embed-large` model to generate float embeddings.
+- **Vector Embedding** – Calls Ollama (`mxbai-embed-large`) or Azure OpenAI (`text-embedding-ada-002`) to generate float embeddings.
 - **Vector Storage** – Stores embeddings along with rich metadata (project, file path, namespace, symbol type/name, source content) in [Qdrant](https://qdrant.tech/) at `localhost:6334` (gRPC).
 - **Live Log Stream** – Real-time log viewer with level filtering. Shows buffered history + live events via event subscription.
-- **Semantic Search** – `SearchService` accepts a natural-language query, embeds it via Ollama, and returns the top-5 most similar code chunks from Qdrant.
+- **Semantic Search** – `SearchService` accepts a natural-language query, embeds it, and returns the top-5 most similar code chunks from Qdrant.
 
 ---
 
@@ -110,27 +126,33 @@ A **.NET 10 console application** that indexes source code repositories into a v
 
 ```
 UEFA.Rag.Indexer/
-├── Dockerfile                     # Multi-stage container build
-├── podman-compose.yml             # Podman Compose orchestration (Qdrant + indexer)
-├── Program.cs                     # Entry point (interactive menu)
-├── UEFA.Rag.Indexer.csproj        # .NET 10 project file
-├── .ragignore                     # Ignore patterns (gitignore-style)
-├── .ragindex-state.json           # Auto-generated index state (do not commit)
-├── README.md                      # This file
+├── appsettings.json                 # Application configuration (embedding provider, etc.)
+├── Dockerfile                       # Multi-stage container build
+├── podman-compose.yml               # Podman Compose orchestration (Qdrant + indexer)
+├── Program.cs                       # Entry point (interactive menu)
+├── UEFA.Rag.Indexer.csproj          # .NET 10 project file
+├── .ragignore                       # Ignore patterns (gitignore-style)
+├── .ragindex-state.json             # Auto-generated index state (do not commit)
+├── README.md                        # This file
 ├── Models/
-│   ├── CodeChunk.cs               # Chunk data model
-│   ├── IndexState.cs              # Index state data model
-│   └── LogEntry.cs                # Structured log entry model
+│   ├── CodeChunk.cs                 # Chunk data model
+│   ├── IndexState.cs                # Index state data model
+│   └── LogEntry.cs                  # Structured log entry model
 └── Services/
-    ├── RepositoryScanner.cs       # File discovery
-    ├── RagIgnore.cs               # .ragignore pattern matching
-    ├── CSharpCodeParser.cs        # Roslyn-based C# parser
-    ├── EmbeddingService.cs        # Ollama embedding client
-    ├── QdrantService.cs           # Qdrant vector DB client
-    ├── IndexingService.cs         # Orchestration pipeline (delta-aware)
-    ├── IndexStateManager.cs       # State file management & delta computation
-    ├── SearchService.cs           # Semantic search
-    ├── LogStream.cs               # Singleton in-memory log buffer with event subscription
+    ├── Configuration/
+    │   └── EmbeddingOptions.cs      # Strongly-typed options POCOs
+    ├── AzureOpenAiEmbeddingService.cs  # Azure OpenAI embedding client
+    ├── IEmbeddingService.cs         # Embedding service abstraction
+    ├── OllamaEmbeddingService.cs    # Ollama embedding client
+    ├── RepositoryScanner.cs         # File discovery
+    ├── RagIgnore.cs                 # .ragignore pattern matching
+    ├── CSharpCodeParser.cs          # Roslyn-based C# parser
+    ├── EmbeddingService.cs          # (removed) — replaced by IEmbeddingService
+    ├── QdrantService.cs             # Qdrant vector DB client
+    ├── IndexingService.cs           # Orchestration pipeline (delta-aware)
+    ├── IndexStateManager.cs         # State file management & delta computation
+    ├── SearchService.cs             # Semantic search
+    ├── LogStream.cs                 # Singleton in-memory log buffer with event subscription
     └── ...
 ```
 
@@ -140,7 +162,7 @@ UEFA.Rag.Indexer/
 
 ### Indexing (`IndexingService.IndexAsync`)
 
-1. **Scan** – `RepositoryScanner` enumerates all files under the root folder with supported extensions.
+1. **Scan** – `RepositoryScanner` enumerates all files under the root folder with supported extensions (excluding the state file `.ragindex-state.json`).
 2. **Filter** – `RagIgnore` excludes files matching patterns defined in `.ragignore`.
 3. **Load State** – `IndexStateManager` reads `.ragindex-state.json` (if it exists).
 4. **Compute Delta** – Compares current files against the state to find new, modified, and deleted files.
@@ -149,15 +171,16 @@ UEFA.Rag.Indexer/
    - Old points are removed (if re-indexing a modified file).
    - **C# files** (`.cs`) → `CSharpCodeParser` extracts every **class** and its **methods** as separate chunks.
    - **Other files** → a single `"document"` chunk with the full file content.
+   - Empty chunks are skipped.
    - Each chunk gets a deterministic ID via `ComputeDeterministicId()`.
-   - Each chunk's `Content` is sent to Ollama's `/api/embed` endpoint to produce a `float[]` vector.
+   - Each chunk's `Content` is sent to the configured `IEmbeddingService` to produce a `float[]` vector.
    - The vector and payload are upserted into the Qdrant collection `uefa_code`.
    - State is saved after every file (interrupt-resilient).
 7. **Final Save** – State file is saved one last time.
 
 ### Search (`SearchService.SearchAsync`)
 
-1. **Query Embedding** – The user's natural-language query is sent to Ollama to generate an embedding.
+1. **Query Embedding** – The user's natural-language query is sent to the configured embedding service to generate an embedding.
 2. **Vector Search** – The embedding is searched against the `uefa_code` collection in Qdrant (top-5 results).
 3. **Display** – Results are printed with similarity score and full payload metadata.
 
@@ -168,6 +191,9 @@ UEFA.Rag.Indexer/
 | Package                                   | Version   | Purpose                         |
 |-------------------------------------------|-----------|---------------------------------|
 | `Microsoft.CodeAnalysis.CSharp`           | 5.6.0     | C# syntax parsing (Roslyn)      |
+| `Microsoft.Extensions.Configuration.Binder` | 10.0.10 | Configuration binding           |
+| `Microsoft.Extensions.Configuration.EnvironmentVariables` | 10.0.10 | Env var config overlay |
+| `Microsoft.Extensions.Configuration.Json` | 10.0.10   | JSON configuration reader       |
 | `Microsoft.Extensions.FileSystemGlobbing` | 10.0.10   | `.ragignore` glob pattern matching |
 | `Qdrant.Client`                           | 1.18.1    | gRPC client for Qdrant          |
 | `Spectre.Console`                         | 0.57.2    | Interactive console UI          |
@@ -176,8 +202,90 @@ UEFA.Rag.Indexer/
 
 | Service      | Endpoint             | Purpose                        |
 |--------------|----------------------|--------------------------------|
-| **Ollama**   | `localhost:11434`    | Embedding inference (`mxbai-embed-large`) |
+| **Ollama**   | `localhost:11434`    | Embedding inference (default, `mxbai-embed-large`) |
+| **Azure OpenAI** | (configurable)  | Embedding inference (`text-embedding-ada-002` or custom) |
 | **Qdrant**   | `localhost:6334`     | Vector database (gRPC)         |
+
+---
+
+## Configuration
+
+### `appsettings.json`
+
+The application reads from `appsettings.json` with environment variable overlay. The `Embedding` section controls which provider is used:
+
+```json
+{
+  "Embedding": {
+    "Provider": "ollama",
+    "Ollama": {
+      "BaseUrl": "http://localhost:11434",
+      "Model": "mxbai-embed-large"
+    },
+    "AzureOpenAi": {
+      "Endpoint": "",
+      "Key": "",
+      "DeploymentName": "text-embedding-ada-002"
+    }
+  }
+}
+```
+
+Switch to Azure OpenAI by changing the provider and filling in the credentials:
+
+```json
+{
+  "Embedding": {
+    "Provider": "azure",
+    "AzureOpenAi": {
+      "Endpoint": "https://your-resource.openai.azure.com",
+      "Key": "your-api-key",
+      "DeploymentName": "text-embedding-ada-002"
+    }
+  }
+}
+```
+
+Environment variables override JSON keys using the `__` (double underscore) separator. For example:
+
+```powershell
+$env:Embedding__Provider = "azure"
+$env:Embedding__AzureOpenAi__Endpoint = "https://your-resource.openai.azure.com"
+$env:Embedding__AzureOpenAi__Key = "your-api-key"
+```
+
+### `.ragignore`
+
+Place a `.ragignore` file at the root of the repository being indexed. It follows the same pattern syntax as `.gitignore` (comments with `#`, glob patterns). Example:
+
+```
+# Build artifacts
+bin/
+obj/
+
+# Dependencies
+node_modules/
+packages/
+
+# Generated code
+*.Designer.cs
+*.g.cs
+
+# Secrets
+appsettings.Development.json
+```
+
+### `.ragindex-state.json`
+
+This file is auto-generated in the root folder being indexed. It tracks content hashes and timestamps for every indexed file. **Do not commit this file** — it is already in `.gitignore`.
+
+Delete it if you want to force a full re-index on the next run.
+
+### Supported File Extensions
+
+Defined in `IndexingService.cs`:
+
+`.cs`, `.csproj`, `.sln`, `.json`, `.yaml`, `.yml`, `.xml`, `.config`, `.sql`, `.md`
 
 ---
 
@@ -201,7 +309,7 @@ Verify the installation:
 dotnet --list-sdks
 ```
 
-### 2. Ollama (Embedding Inference)
+### 2. Ollama (Embedding Inference — Default Provider)
 
 Ollama runs as a local service and serves the embedding model over HTTP.
 
@@ -222,8 +330,6 @@ Verify the service is running:
 ```powershell
 curl http://localhost:11434/api/version
 ```
-
-> **Note:** The Ollama endpoint can be configured via the `OLLAMA_BASE_URL` environment variable (defaults to `http://localhost:11434`). Likewise, Qdrant's host and port are configurable via `QDRANT_HOST` and `QDRANT_PORT`.
 
 ### 3. Qdrant (Vector Database)
 
@@ -292,7 +398,7 @@ This launches the interactive menu:
 You can also use CLI arguments for non-interactive use:
 
 ```powershell
-# Index a repository
+# Index a repository (uses configured embedding provider)
 dotnet run -- run "C:\Projects\MyApp"
 
 # List Qdrant collections
@@ -353,7 +459,7 @@ The `podman-compose.yml` runs **only Qdrant** in a container, letting the consol
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **Podman** | Container engine | [podman.io](https://podman.io/docs/installation) |
-| **Ollama** | Embedding service | [ollama.com](https://ollama.com/) – must be running on the host with `mxbai-embed-large` pulled |
+| **Ollama** (or Azure OpenAI) | Embedding service | See configuration section above |
 
 ### Start Qdrant
 
@@ -374,71 +480,27 @@ podman compose down
 ### Topology
 
 ```
-┌─────────────────────────────┐
-│  Host                        │
-│                              │
-│  ┌──────────────┐           │
-│  │  Qdrant       │           │
-│  │  :6333 (REST) │           │
-│  │  :6334 (gRPC) │◄── ─┐    │
-│  └──────────────┘      │    │
-│                         │    │
-│  ┌──────────────────┐   │    │
-│  │  .NET 10 Console │───┘    │
-│  │  (dotnet run)    │        │
-│  └──────────────────┘        │
-│                              │
-│  ┌──────────────────┐        │
-│  │  Ollama           │        │
-│  │  localhost:11434  │        │
-│  └──────────────────┘        │
-└─────────────────────────────┘
+┌─────────────────────────────────────┐
+│  Host                                │
+│                                      │
+│  ┌──────────────┐                   │
+│  │  Qdrant       │                   │
+│  │  :6333 (REST) │                   │
+│  │  :6334 (gRPC) │◄── ─┐            │
+│  └──────────────┘      │            │
+│                         │            │
+│  ┌──────────────────┐   │            │
+│  │  .NET 10 Console │───┘            │
+│  │  (dotnet run)    │                │
+│  └──────────────────┘                │
+│                                      │
+│  Embedding Provider (one of):        │
+│  ┌──────────────────┐                │
+│  │  Ollama           │  localhost:11434│
+│  │  or Azure OpenAI  │  cloud         │
+│  └──────────────────┘                │
+└─────────────────────────────────────┘
 ```
-
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `QDRANT_HOST` | `localhost` | Qdrant gRPC hostname |
-| `QDRANT_PORT` | `6334` | Qdrant gRPC port |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama HTTP endpoint |
-
----
-
-## Configuration
-
-### `.ragignore`
-
-Place a `.ragignore` file at the root of the repository being indexed. It follows the same pattern syntax as `.gitignore` (comments with `#`, glob patterns). Example:
-
-```
-# Build artifacts
-bin/
-obj/
-
-# Dependencies
-node_modules/
-packages/
-
-# Generated code
-*.Designer.cs
-*.g.cs
-
-# Secrets
-appsettings.Development.json
-```
-
-### `.ragindex-state.json`
-
-This file is auto-generated in the root folder being indexed. It tracks content hashes and timestamps for every indexed file. **Do not commit this file** — it is already in `.gitignore`.
-
-Delete it if you want to force a full re-index on the next run.
-
-### Supported File Extensions
-
-Defined in `RepositoryScanner.cs`:
-
-`.cs`, `.csproj`, `.sln`, `.json`, `.yaml`, `.yml`, `.xml`, `.config`, `.sql`, `.md`
 
 ---
 
@@ -452,6 +514,7 @@ Defined in `RepositoryScanner.cs`:
    - **Unchanged files** → hash matches → skipped entirely.
 3. State is saved **after every file**, so Ctrl+C or a crash only loses the current file's work.
 4. If the Qdrant collection is deleted (e.g. via "Clean"), the state file is automatically discarded and a full re-index is performed.
+5. The state file itself (`.ragindex-state.json`) is excluded from the scan to prevent cyclic re-indexing.
 
 ---
 
