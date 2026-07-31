@@ -6,6 +6,39 @@ The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/se
 
 ---
 
+## Table of Contents
+
+- [Features](#features)
+- [Solution Structure](#solution-structure)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [Build](#build)
+  - [Run the Web API (via Aspire)](#run-the-web-api-via-aspire)
+  - [Run the Web API standalone](#run-the-web-api-standalone)
+  - [Run the MCP server](#run-the-mcp-server)
+- [API Reference](#api-reference)
+  - [`POST /api/index`](#post-api-index)
+  - [`POST /api/search`](#post-api-search)
+  - [`POST /api/context`](#post-api-context)
+- [MCP Server (`Rag.Indexer.Mcp`)](#mcp-server-ragindexermcp)
+  - [Quick start](#quick-start)
+  - [Transport modes](#transport-modes)
+  - [Configuration (MCP-specific)](#configuration-mcp-specific)
+  - [Tool available to AI clients](#tool-available-to-ai-clients)
+  - [Claude Desktop setup](#claude-desktop-setup)
+  - [Cursor setup](#cursor-setup)
+  - [Detailed documentation](#detailed-documentation)
+- [Configuration](#configuration)
+  - [Embedding provider](#embedding-provider)
+  - [Service endpoints](#service-endpoints)
+  - [`.ragignore`](#ragignore)
+  - [Supported file extensions](#supported-file-extensions)
+  - [`.ragindex-state.json`](#ragindex-statejson)
+- [How Incremental Indexing Works](#how-incremental-indexing-works)
+- [License](#license)
+
+---
+
 ## Features
 
 - **Semantic C# chunking** – Roslyn (`Microsoft.CodeAnalysis.CSharp`) extracts classes and methods as separate searchable chunks; all other supported file types are indexed as whole documents.
@@ -92,13 +125,7 @@ dotnet run --project src/Rag.Indexer.Api
 
 ### Run the MCP server
 
-```powershell
-# stdio transport (default) — stdout is reserved for the MCP protocol
-dotnet run --project src/Rag.Indexer.Mcp
-
-# HTTP transport
-dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
-```
+See the [MCP Server README](src/Rag.Indexer.Mcp/README.md) for transport modes, configuration, and AI-client setup instructions.
 
 ---
 
@@ -145,11 +172,75 @@ Like `/api/search`, but returns an aggregated, ready-to-inject context string al
 
 ---
 
-## MCP Tools
+## MCP Server (`Rag.Indexer.Mcp`)
 
-| Tool | Description |
-|------|-------------|
-| `GetContext` | `get_context(query, limit=5)` – searches indexed code and returns relevant code snippets with file, symbol, namespace, and score. |
+The solution includes a standalone **MCP (Model Context Protocol) server** that exposes the RAG indexer as an AI-assistant tool. Any MCP-compatible client — Claude Desktop, Cursor, Windsurf, Copilot CLI, etc. — can call `GetContext` to perform semantic code lookups without custom integration code.
+
+### Quick start
+
+```powershell
+# stdio transport (default) — stdout is reserved for the MCP protocol
+dotnet run --project src/Rag.Indexer.Mcp
+
+# HTTP transport
+dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
+```
+
+### Transport modes
+
+| Mode | Use case | How to start |
+|------|----------|-------------|
+| **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (Claude Desktop, Cursor, etc.) | `dotnet run` |
+| **HTTP** | Remote clients connecting over a network | `dotnet run -- --transport=http` |
+
+#### stdio transport
+
+- **stdout** is reserved exclusively for MCP protocol messages (JSON-RPC frames). Never write to stdout outside the MCP library.
+- **stderr** is used for all logging (`LogLevel.Trace`). Stdout providers are cleared so they do not corrupt the protocol stream.
+- A bare `Host` builder is used — Kestrel does **not** start, so no ports bind and there is zero risk of conflicting with MCP pipes.
+
+#### HTTP transport
+
+- Uses ASP.NET Core via `AddMcpServer().WithHttpTransport()`.
+- Application logging is cleared to prevent polluting stdout.
+- Exposes the MCP endpoint at `/mcp` (standard MCP-over-SSE path).
+
+### Configuration (MCP-specific)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API endpoint for embedding generation |
+| `OLLAMA_MODEL` | `mxbai-embed-large` | Ollama model identifier |
+| `QDRANT_HOST` | `localhost` | Qdrant vector store hostname |
+| `QDRANT_PORT` | `6334` | Qdrant gRPC port |
+| `MCP_TRANSPORT` | `stdio` | Override: set to `http` to force HTTP mode without passing `--transport=http` |
+
+### Tool available to AI clients
+
+| Tool | Signature | Description |
+|------|-----------|-------------|
+| `GetContext` | `get_context(query, limit=5)` | Searches indexed code and returns relevant code snippets with file, symbol, namespace, and score. |
+
+### Claude Desktop setup
+
+```json
+{
+  "mcpServers": {
+    "rag-indexer": {
+      "command": "dotnet",
+      "args": ["C:\\path\\to\\Rag.Indexer.Mcp.dll"]
+    }
+  }
+}
+```
+
+### Cursor setup
+
+Open **Settings → Features → MCP → Add new MCP server** and add the same config block as above.
+
+### Detailed documentation
+
+For full documentation — architecture, logging, dependencies, `GetContext` tool specification, extending with new tools, and troubleshooting — see **[Rag.Indexer.Mcp README](src/Rag.Indexer.Mcp/README.md)**.
 
 ---
 
