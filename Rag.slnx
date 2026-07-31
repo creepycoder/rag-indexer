@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Rag.Indexer.Api/Rag.Indexer.Api.csproj" />
+    <Project Path="src/Rag.Indexer.AppHost/Rag.Indexer.AppHost.csproj" />
+    <Project Path="src/Rag.Indexer.Mcp/Rag.Indexer.Mcp.csproj" />
+    <Project Path="src/Rag.Indexer.ServiceDefaults/Rag.Indexer.ServiceDefaults.csproj" />
+    <Project Path="src/Rag.Indexer/Rag.Indexer.csproj" />
+  </Folder>
+</Solution>

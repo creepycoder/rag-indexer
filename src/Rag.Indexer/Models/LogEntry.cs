@@ -8,7 +8,7 @@ public enum LogLevel
     Error
 }
 
-public class LogEntry
+public record LogEntry
 {
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
     public LogLevel Level { get; init; }

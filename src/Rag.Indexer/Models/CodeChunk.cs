@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Rag.Indexer.Models;
 
-public class CodeChunk
+public record CodeChunk
 {
     /// <summary>
     /// Unique identifier for this chunk, used as the Qdrant point UUID.
@@ -11,25 +11,25 @@ public class CodeChunk
     /// </summary>
     public string Id { get; set; } = "";
 
-    public string Project { get; set; } = "";
+    public string Project { get; init; } = "";
 
-    public string FilePath { get; set; } = "";
+    public string FilePath { get; init; } = "";
 
-    public string Namespace { get; set; } = "";
+    public string Namespace { get; init; } = "";
 
-    public string SymbolType { get; set; } = "";
+    public string SymbolType { get; init; } = "";
 
-    public string SymbolName { get; set; } = "";
+    public string SymbolName { get; init; } = "";
 
-    public string? ParentSymbol { get; set; }
+    public string? ParentSymbol { get; init; }
 
-    public List<string> Usings { get; set; } = [];
+    public List<string> Usings { get; init; } = [];
 
-    public List<string> Attributes { get; set; } = [];
+    public List<string> Attributes { get; init; } = [];
 
-    public List<string> Dependencies { get; set; } = [];
+    public List<string> Dependencies { get; init; } = [];
 
-    public string Content { get; set; } = "";
+    public string Content { get; init; } = "";
 
     /// <summary>
     /// Computes a deterministic UUID from the chunk's file path, symbol name, and content.

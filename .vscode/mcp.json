@@ -1,0 +1,21 @@
+{
+  "servers": {
+    "rag-indexer": {
+      "command": "dotnet",
+      "args": [
+        "exec",
+        "--runtimeconfig",
+        "src/Rag.Indexer.Mcp/bin/Debug/net10.0/Rag.Indexer.Mcp.runtimeconfig.json",
+        "--depsfile",
+        "src/Rag.Indexer.Mcp/bin/Debug/net10.0/Rag.Indexer.Mcp.deps.json",
+        "src/Rag.Indexer.Mcp/bin/Debug/net10.0/Rag.Indexer.Mcp.dll"
+      ],
+      "env": {
+        "OLLAMA_BASE_URL": "http://localhost:11434",
+        "OLLAMA_MODEL": "mxbai-embed-large",
+        "QDRANT_HOST": "localhost",
+        "QDRANT_PORT": "6334"
+      }
+    }
+  }
+}

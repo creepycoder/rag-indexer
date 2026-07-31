@@ -11,11 +11,11 @@ public class IndexState
     public Dictionary<string, FileState> Files { get; set; } = [];
 }
 
-public class FileState
+public record FileState
 {
     [JsonPropertyName("content_hash")]
-    public string ContentHash { get; set; } = "";
+    public string ContentHash { get; init; } = "";
 
     [JsonPropertyName("last_indexed")]
-    public DateTime LastIndexed { get; set; }
+    public DateTime LastIndexed { get; init; }
 }

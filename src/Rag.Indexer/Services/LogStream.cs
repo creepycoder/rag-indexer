@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Rag.Indexer.Models;
+using LogLevel = Rag.Indexer.Models.LogLevel;
 
 namespace Rag.Indexer.Services;
 
