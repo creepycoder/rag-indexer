@@ -20,9 +20,8 @@ public class RepositoryScanner
     {
         var ignore = new RagIgnore(rootFolder);
 
-        return Directory
-            .EnumerateFiles(rootFolder, "*", SearchOption.AllDirectories)
-            .Where(f => SupportedExtensions.Contains(Path.GetExtension(f)))
-            .Where(f => !ignore.IsIgnored(rootFolder, f));
+        return ignore
+            .GetIncludedFiles(rootFolder)
+            .Where(f => SupportedExtensions.Contains(Path.GetExtension(f)));
     }
 }

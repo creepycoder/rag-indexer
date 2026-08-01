@@ -2,7 +2,7 @@
 
 A **.NET 10** semantic code-indexing solution for Retrieval-Augmented Generation (RAG) workflows. It scans source repositories, parses C# code into semantic chunks (classes and methods) via Roslyn, generates vector embeddings with **Ollama** or **Azure OpenAI**, and stores them in **Qdrant** for similarity search.
 
-The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/search`, `/api/context`) and an **MCP server** (`GetContext` tool), orchestrated with **.NET Aspire**.
+The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/search`, `/api/context`, …), an **Angular web UI** for indexing and search, and an **MCP server** (`GetContext` tool), orchestrated with **.NET Aspire**.
 
 ---
 
@@ -14,6 +14,7 @@ The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/se
 - [Getting Started](#getting-started)
   - [Build](#build)
   - [Run the Web API (via Aspire)](#run-the-web-api-via-aspire)
+  - [Run the Web UI (Angular)](#run-the-web-ui-angular)
   - [Run the Web API standalone](#run-the-web-api-standalone)
   - [Run the MCP server](#run-the-mcp-server)
 - [API Reference](#api-reference)
@@ -49,8 +50,9 @@ The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/se
 - **Backup & snapshots** – `QdrantSnapshotService` creates collection snapshots through the Qdrant REST API for backup/restore.
 - **Repository filtering** – Gitignore-style `.ragignore` patterns and an allow-listed set of file extensions.
 - **Web API** – REST endpoints for indexing, semantic search, and retrieving aggregated context, with OpenAPI + Scalar UI in development.
+- **Web UI (Angular)** – a browser dashboard for indexing folders, searching the index, and viewing collection/status info, served during development by `rag-web` on `http://localhost:4200`.
 - **MCP server** – Exposes a `GetContext` tool so AI assistants can query the index, over `stdio` or HTTP transport.
-- **Aspire orchestration** – `Rag.Indexer.AppHost` runs the Qdrant container, the indexer worker, the API, and the MCP server, all visible in the Aspire dashboard with OpenTelemetry and service discovery.
+- **Aspire orchestration** – `Rag.Indexer.AppHost` runs the Qdrant container, a locally-installed Ollama, the indexer worker, the API, the MCP server, and the web UI, all visible in the Aspire dashboard with OpenTelemetry and service discovery.
 - **Graceful configuration** – `appsettings.json` is optional; falls back to environment variables and sensible defaults (`ollama`, `localhost:11434`).
 
 ---
@@ -78,12 +80,14 @@ src/
 │   │   └── LogStream.cs                        # In-memory log buffer
 │   └── Models/                                 # CodeChunk, IndexState, LogEntry, ...
 ├── Rag.Indexer.Api/                        # ASP.NET Core Web API
-│   └── Controllers/RagController.cs         # /api/index, /api/search, /api/context
+│   └── Controllers/                        # RagController, FolderController, StatusController
 ├── Rag.Indexer.Mcp/                        # MCP server (stdio + HTTP)
 │   └── Tools/RagTools.cs                    # GetContext tool
 ├── Rag.Indexer.Worker/                   # Continuous indexer worker (long-running)
 │   └── IndexerWorker.cs                   # Periodic delta indexing of configured repos
-├── Rag.Indexer.AppHost/                    # Aspire orchestrator (Qdrant + API + MCP + worker)
+├── Rag.Indexer.Web/                        # Angular 21 web UI (indexing, search, status)
+│   └── src/app/                            # Features: index, search, status
+├── Rag.Indexer.AppHost/                    # Aspire orchestrator (Qdrant + Ollama + API + MCP + worker + web)
 └── Rag.Indexer.ServiceDefaults/            # Shared Aspire defaults (telemetry, health, resilience)
 ```
 
@@ -94,11 +98,14 @@ src/
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **.NET 10 SDK** | Build & run | `winget install Microsoft.DotNet.SDK.10` |
+| **Node.js 22+** | Build & serve the Angular web UI | `winget install OpenJS.NodeJS.LTS` |
 | **Qdrant** | Vector database (gRPC `:6334`, REST `:6333`) | **Via Aspire** – automatically provisioned as a container resource by the AppHost (no manual install). **Standalone:** `docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant` |
 | **Ollama** (default) | Local embeddings | `winget install Ollama.Ollama` then `ollama pull mxbai-embed-large` |
 | **Azure OpenAI** (optional) | Cloud embeddings | A deployed embedding model, e.g. `text-embedding-ada-002` |
 
 The `uefa_code` collection is created automatically on first indexing run.
+
+> **Ollama via Aspire:** when run through the AppHost, Ollama is started automatically as a managed **`ollama serve`** process (an executable resource, not a container) on `http://localhost:11434`, with a health check and dashboard commands (List All Models / List Running Models). The `mxbai-embed-large` model must still be pulled once: `ollama pull mxbai-embed-large`.
 
 ---
 
@@ -119,11 +126,25 @@ dotnet run --project src/Rag.Indexer.AppHost
 This starts the Aspire dashboard together with the full stack:
 
 - **`qdrant`** – the Qdrant vector database as an Aspire-managed container (data persisted in a named volume). Authentication is disabled by default, so the Qdrant web dashboard opens directly without asking for a key. Set `Qdrant:ApiKey` in the AppHost `.env` file to enable a key.
+- **`ollama`** – a locally-installed Ollama started as a managed executable (`ollama serve`), with a health check and dashboard commands to list all or running models.
 - **`rag-api`** – the REST API. In development, OpenAPI is available at `/openapi/v1.json` and an interactive Scalar UI at `/scalar`.
 - **`rag-mcp`** – the MCP server, started in **HTTP transport** mode (`/mcp`) so it can be monitored from the dashboard.
 - **`rag-indexer`** – the continuous indexer worker, which periodically runs delta indexing for the repositories listed under `Indexing:Repositories`.
+- **`rag-web`** – the Angular web UI, served on `http://localhost:4200` (`ng serve`), with hot reload.
 
 All resources appear as cards in the dashboard with live logs, traces, and metrics. Qdrant exposes a web UI too — open its **HTTP** endpoint in the dashboard and append `/dashboard`.
+
+### Run the Web UI (Angular)
+
+The web UI is started automatically by the AppHost as the `rag-web` resource (it runs `ng serve` on `http://localhost:4200` and connects to the API at `http://localhost:5004`). To run it standalone:
+
+```powershell
+cd src/Rag.Indexer.Web
+npm install
+ng serve
+```
+
+The UI talks to the API over `http://localhost:5004`. The API enables CORS for browser origins in development, so no extra setup is required when both run locally.
 
 ### Run the Web API standalone
 
@@ -196,6 +217,36 @@ Like `/api/search`, but returns an aggregated, ready-to-inject context string al
   "symbolTypeFilter": "class"
 }
 ```
+
+### `POST /api/scan`
+
+Preview which files would be indexed for a repository path. Does **not** modify anything — it runs the scanner and computes the pending delta against the current state file.
+
+```json
+{ "repositoryPath": "C:\\Projects\\MyApp" }
+```
+
+Returns `totalFiles`, `newOrModified`, `deleted`, `unchanged`, `needsIndexing`, and the relative file list.
+
+### `GET /api/directories`
+
+Browse the filesystem on the API machine (used by the web UI's folder picker). With no `path` (or empty), returns drive roots; otherwise returns the subfolders of `path` plus its parent:
+
+```
+GET /api/directories?path=C:\Projects
+```
+
+### `GET /api/repositories`
+
+The repositories configured for the indexer worker (`Indexing:Repositories`), so the UI can offer them as quick choices.
+
+### `GET /api/collections`
+
+Lists all collections in the vector store. Individual collection details (status, points, segments, vector size, distance) are available at `GET /api/collections/{name}`.
+
+### `GET /api/logs`
+
+Recent entries from the in-memory log stream. Optional filters: `?source=` (substring match) and `?limit=` (most recent N entries).
 
 ---
 
@@ -314,6 +365,8 @@ The AppHost loads an optional `.env` file from `src/Rag.Indexer.AppHost/` on sta
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `Qdrant:ApiKey` | *(empty)* | Qdrant API key. Empty disables Qdrant authentication so the dashboard doesn't ask for a key. Set a value to enable authentication. |
+| `Ollama:BaseUrl` | `http://localhost:11434` | Ollama API endpoint used by the AppHost for embedding configuration |
+| `Ollama:Model` | `mxbai-embed-large` | Ollama embedding model used by the AppHost |
 
 ### Service endpoints
 
@@ -329,9 +382,11 @@ The AppHost loads an optional `.env` file from `src/Rag.Indexer.AppHost/` on sta
 | `Indexing__Repositories` | *(none)* | Repository folder(s) the indexer worker keeps indexed (array) |
 | `Indexing__IntervalSeconds` | `300` | How often the worker re-runs delta indexing |
 
+> **CORS (web UI):** the API enables a `rag-web` CORS policy that allows any origin in development (`builder.Environment.IsDevelopment()`), which covers the Angular dev server on `http://localhost:4200`.
+
 ### `.ragignore`
 
-Place a `.ragignore` file at the root of the repository being indexed. It uses gitignore-style patterns:
+Place a `.ragignore` file at the root of the repository being indexed. It uses gitignore-style glob patterns matched against the full file set (`**/` semantics), applied by the scanner before indexing:
 
 ```
 # Build artifacts
@@ -345,6 +400,8 @@ obj/
 # Secrets
 appsettings.Development.json
 ```
+
+Patterns that do not start with `**/` or `/` are treated as if prefixed with `**/` (matching at any depth), mirroring gitignore behavior.
 
 ### Supported file extensions
 

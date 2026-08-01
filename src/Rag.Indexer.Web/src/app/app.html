@@ -1,0 +1,13 @@
+<div class="app-shell">
+  <header class="toolbar">
+    <span class="brand">Rag<span>.Indexer</span></span>
+    <nav class="nav">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Search</a>
+      <a routerLink="/index" routerLinkActive="active">Index</a>
+      <a routerLink="/status" routerLinkActive="active">Status</a>
+    </nav>
+  </header>
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

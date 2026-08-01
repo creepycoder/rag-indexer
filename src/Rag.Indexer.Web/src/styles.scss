@@ -1,0 +1,29 @@
+@import '@angular/material/prebuilt-themes/azure-blue.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  background: #f5f7fa;
+  color: #1f2933;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+pre {
+  font-family: 'Cascadia Code', 'SF Mono', Consolas, 'Courier New', monospace;
+}
+
+.mat-mdc-card-title {
+  font-size: 1rem !important;
+}

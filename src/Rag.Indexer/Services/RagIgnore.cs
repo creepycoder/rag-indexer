@@ -10,6 +10,11 @@ public sealed class RagIgnore
     {
         var file = Path.Combine(rootFolder, ".ragignore");
 
+        // An exclude-only matcher matches nothing (both Match() and
+        // GetResultsInFullPath() return empty results). Add a catch-all include
+        // so excludes are applied against the full file set.
+        _matcher.AddInclude("**/*");
+
         if (!File.Exists(file))
             return;
 
@@ -23,15 +28,30 @@ public sealed class RagIgnore
             if (pattern.StartsWith('#'))
                 continue;
 
-            _matcher.AddExclude(pattern.Replace('\\', '/'));
+            _matcher.AddExclude(Normalize(pattern));
         }
     }
 
-    public bool IsIgnored(string rootFolder, string file)
-    {
-        var relative = Path.GetRelativePath(rootFolder, file)
-            .Replace('\\', '/');
+    /// <summary>
+    /// Returns the full paths of all files under <paramref name="rootFolder"/>
+    /// that are NOT ignored by the .ragignore rules.
+    /// </summary>
+    public IEnumerable<string> GetIncludedFiles(string rootFolder)
+        => _matcher.GetResultsInFullPath(rootFolder);
 
-        return _matcher.Match(relative).HasMatches;
+    /// <summary>
+    /// Normalizes a .ragignore pattern to FileSystemGlobbing syntax so it
+    /// matches at any depth (mirroring gitignore semantics).
+    /// </summary>
+    private static string Normalize(string pattern)
+    {
+        pattern = pattern.Replace('\\', '/');
+
+        if (pattern.StartsWith("**/", StringComparison.Ordinal))
+            return pattern;
+
+        return pattern.StartsWith('/')
+            ? pattern.TrimStart('/')
+            : $"**/{pattern}";
     }
 }

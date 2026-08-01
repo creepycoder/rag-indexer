@@ -1,0 +1,102 @@
+<div class="search-page">
+  <mat-card appearance="outlined" class="query-card">
+    <mat-card-content>
+      <div class="query-row">
+        <mat-form-field appearance="outline" class="query-field">
+          <mat-label>Query</mat-label>
+          <input
+            matInput
+            [ngModel]="store.query()"
+            (ngModelChange)="store.setQuery($event)"
+            placeholder="e.g. how is delta indexing computed?"
+            (keydown.enter)="store.search()"
+          />
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="limit-field">
+          <mat-label>Limit</mat-label>
+          <mat-select
+            [value]="store.limit()"
+            (selectionChange)="store.setLimit($event.value)"
+          >
+            @for (n of limits; track n) {
+              <mat-option [value]="n">{{ n }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="store.search()"
+          [disabled]="store.loading()"
+        >
+          Search
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (store.loading()) {
+    <mat-progress-bar mode="indeterminate" class="progress"></mat-progress-bar>
+  }
+
+  @if (store.error(); as error) {
+    <mat-card appearance="outlined" class="notice error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error }}</span>
+    </mat-card>
+  }
+
+  @if (store.hasResults()) {
+    <div class="results-toolbar">
+      <mat-checkbox
+        color="primary"
+        [checked]="store.showContext()"
+        (change)="store.toggleContext()"
+      >
+        Aggregate context
+      </mat-checkbox>
+      <span class="count">{{ store.results().length }} result(s)</span>
+    </div>
+
+    @if (store.showContext() && store.aggregatedContext(); as context) {
+      <mat-card appearance="outlined" class="context-card">
+        <mat-card-header>
+          <mat-card-title>Aggregated context</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <pre class="context">{{ context }}</pre>
+          <button mat-button color="primary" (click)="store.copyContext()">
+            <mat-icon>content_copy</mat-icon>
+            Copy
+          </button>
+        </mat-card-content>
+      </mat-card>
+    }
+
+    @for (result of store.results(); track result.id) {
+      <mat-card appearance="outlined" class="result-card">
+        <mat-card-header>
+          <mat-card-title>
+            <span class="symbol-type">{{ result.symbolType || 'document' }}</span>
+            {{ result.symbolName || result.filePath }}
+          </mat-card-title>
+          <mat-card-subtitle>
+            <span class="file">{{ result.filePath }}</span>
+            @if (result.namespace) {
+              <span class="ns">{{ result.namespace }}</span>
+            }
+            <span class="score">{{ (result.score * 100).toFixed(1) }}%</span>
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <pre class="code">{{ result.content }}</pre>
+        </mat-card-content>
+      </mat-card>
+    }
+  } @else if (!store.loading()) {
+    <p class="empty">Enter a query to search the indexed code.</p>
+  }
+</div>

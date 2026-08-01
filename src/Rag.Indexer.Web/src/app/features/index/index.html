@@ -1,0 +1,138 @@
+<div class="index-page">
+  <mat-card appearance="outlined" class="index-card">
+    <mat-card-content>
+      <div class="index-row">
+        <mat-form-field appearance="outline" class="path-field">
+          <mat-label>Repository path</mat-label>
+          <input
+            matInput
+            [ngModel]="store.repositoryPath()"
+            (ngModelChange)="store.setRepositoryPath($event)"
+            [matAutocomplete]="auto"
+            placeholder="C:\Projects\MyApp"
+            (keydown.enter)="store.indexRepository()"
+          />
+          <mat-icon matSuffix>folder</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-stroked-button
+          class="browse-btn"
+          (click)="openFolderPicker()"
+          matTooltip="Browse folders on the API machine"
+        >
+          <mat-icon>folder_open</mat-icon>
+          Browse…
+        </button>
+
+        <mat-autocomplete #auto="matAutocomplete" (optionSelected)="store.setRepositoryPath($event.option.value)">
+          @for (path of pathOptions(); track path) {
+            <mat-option [value]="path">
+              <mat-icon>folder</mat-icon>
+              <span>{{ path }}</span>
+            </mat-option>
+          }
+        </mat-autocomplete>
+      </div>
+
+      <div class="index-row actions-row">
+        <button
+          mat-flat-button
+          color="accent"
+          (click)="store.scanRepository()"
+          [disabled]="store.scanning() || store.indexing() || !store.repositoryPath().trim()"
+        >
+          {{ store.scanning() ? 'Scanning…' : 'Scan' }}
+        </button>
+
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="store.indexRepository()"
+          [disabled]="store.indexing() || store.scanning() || !store.repositoryPath().trim()"
+        >
+          {{ store.indexing() ? 'Indexing…' : 'Start indexing' }}
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  @if (store.scanning() || store.indexing()) {
+    <mat-progress-bar mode="indeterminate" class="progress"></mat-progress-bar>
+  }
+
+  @if (store.scanResult(); as scan) {
+    <mat-card appearance="outlined" class="scan-card">
+      <mat-card-header>
+        <mat-card-title>Scan result</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="scan-stats">
+          <span class="stat">
+            <b>{{ scan.totalFiles }}</b> files found
+          </span>
+          <span class="stat">
+            <b>{{ scan.newOrModified }}</b> new/modified
+          </span>
+          <span class="stat">
+            <b>{{ scan.unchanged }}</b> unchanged
+          </span>
+          <span class="stat">
+            <b>{{ scan.deleted }}</b> to remove
+          </span>
+        </div>
+
+        @if (!scan.needsIndexing) {
+          <p class="up-to-date">
+            <mat-icon>task_alt</mat-icon>
+            Everything is already indexed. Nothing to do.
+          </p>
+        } @else {
+          <div class="file-list">
+            @for (file of scan.files; track file) {
+              <div class="file-line">{{ file }}</div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  @if (store.message(); as message) {
+    <mat-card appearance="outlined" class="notice ok">
+      <mat-icon>check_circle</mat-icon>
+      <span>{{ message }}</span>
+    </mat-card>
+  }
+
+  @if (store.error(); as error) {
+    <mat-card appearance="outlined" class="notice error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ error }}</span>
+    </mat-card>
+  }
+
+  <mat-card appearance="outlined" class="logs-card">
+    <mat-card-header>
+      <mat-card-title>Logs</mat-card-title>
+      <button mat-stroked-button (click)="store.loadLogs(200)">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="log-list">
+        @for (log of store.logs(); track log.timestamp + log.message + log.source) {
+          <div class="log-line">
+            <span class="log-time">{{ log.timestamp }}</span>
+            <span class="log-level {{ levelClass(log.level) }}">{{ log.level }}</span>
+            <span class="log-source">{{ log.source }}</span>
+            <span class="log-message">{{ log.message }}</span>
+          </div>
+        } @empty {
+          <p class="empty">No log entries yet.</p>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+</div>

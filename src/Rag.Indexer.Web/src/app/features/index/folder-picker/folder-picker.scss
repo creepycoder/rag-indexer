@@ -1,0 +1,113 @@
+.picker {
+  width: 100%;
+  box-sizing: border-box;
+
+  .picker-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 600;
+    }
+  }
+
+  .crumbs {
+    padding: 0.35rem 0.6rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    background: #f1f5f9;
+    font-size: 0.8rem;
+    font-family: var(--mono-font, Consolas, monospace);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .progress {
+    margin-bottom: 0.5rem;
+  }
+
+  .error {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    background: #fdecea;
+    color: #b3261e;
+    font-size: 0.85rem;
+  }
+
+  .dir-list {
+    max-height: 45vh;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+  }
+
+  .dir-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    .name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &:hover {
+      background: #f8fafc;
+    }
+
+    &.selected {
+      background: #e3f0fb;
+    }
+  }
+
+  .empty {
+    color: #55616d;
+    text-align: center;
+    padding: 1.5rem 0;
+  }
+
+  .picker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+
+    .selection {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.8rem;
+      font-family: var(--mono-font, Consolas, monospace);
+      color: #55616d;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+  }
+}

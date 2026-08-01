@@ -12,8 +12,6 @@ public class IndexingService
     private readonly QdrantService _qdrant;
     private readonly IndexStateManager _stateManager;
     private readonly EmbeddingCacheService _cache;
-    private RagIgnore? _ignore;
-
 
     public IndexingService(IEmbeddingService embedding, EmbeddingCacheService? cache = null)
     {
@@ -38,11 +36,8 @@ public class IndexingService
 
         var collectionWasCreated = await _qdrant.EnsureCollectionExistsAsync();
 
-        _ignore = new RagIgnore(rootFolder);
-
         // 1. Get all current files
         var allFiles = _scanner.Scan(rootFolder)
-            .Where(x => !_ignore.IsIgnored(rootFolder, x))
             .Where(IsSupportedFile)
             .Where(x => Path.GetFileName(x) != IndexStateManager.StateFileName)
             .ToList();

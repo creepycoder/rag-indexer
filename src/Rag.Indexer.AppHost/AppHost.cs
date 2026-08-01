@@ -7,6 +7,8 @@ LoadDotEnv(Path.Combine(builder.AppHostDirectory, ".env"), builder.Configuration
 var ollamaBaseUrl = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434";
 var ollamaModel = builder.Configuration["Ollama:Model"] ?? "mxbai-embed-large";
 
+var ollama = builder.AddOllamaLocal("ollama");
+
 var qdrantApiKey = builder.AddParameter(
     "qdrant-api-key",
     builder.Configuration["Qdrant:ApiKey"] ?? "",
@@ -17,7 +19,9 @@ var qdrant = builder.AddQdrant("qdrant", qdrantApiKey)
 
 var api = builder.AddProject<Projects.Rag_Indexer_Api>("rag-api")
     .WaitFor(qdrant)
+    .WaitFor(ollama)
     .WithReference(qdrant)
+    .WithReference(ollama)
     .WithEnvironment("OLLAMA_BASE_URL", ollamaBaseUrl)
     .WithEnvironment("OLLAMA_MODEL", ollamaModel)
     .WithEnvironment("Embedding__Ollama__BaseUrl", ollamaBaseUrl)
@@ -25,14 +29,18 @@ var api = builder.AddProject<Projects.Rag_Indexer_Api>("rag-api")
 
 var mcp = builder.AddProject<Projects.Rag_Indexer_Mcp>("rag-mcp")
     .WaitFor(qdrant)
+    .WaitFor(ollama)
     .WithReference(qdrant)
+    .WithReference(ollama)
     .WithArgs("--transport=http")
     .WithEnvironment("OLLAMA_BASE_URL", ollamaBaseUrl)
     .WithEnvironment("OLLAMA_MODEL", ollamaModel);
 
 var worker = builder.AddProject<Projects.Rag_Indexer_Worker>("rag-indexer")
     .WaitFor(qdrant)
+    .WaitFor(ollama)
     .WithReference(qdrant)
+    .WithReference(ollama)
     .WithEnvironment("Embedding__Ollama__BaseUrl", ollamaBaseUrl)
     .WithEnvironment("Embedding__Ollama__Model", ollamaModel);
 
@@ -40,7 +48,13 @@ var repositories = builder.Configuration.GetSection("Indexing:Repositories").Get
 for (var i = 0; i < repositories.Length; i++)
 {
     worker.WithEnvironment($"Indexing__Repositories__{i}", repositories[i]);
+    api.WithEnvironment($"Indexing__Repositories__{i}", repositories[i]);
 }
+
+var web = builder.AddJavaScriptApp("rag-web", "../Rag.Indexer.Web", "start")
+    .WaitFor(api)
+    .WithReference(api)
+    .WithHttpEndpoint(port: 4200, targetPort: 4200, isProxied: false);
 
 builder.Build().Run();
 

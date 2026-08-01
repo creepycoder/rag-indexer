@@ -107,6 +107,49 @@ public class RagController : ControllerBase
     }
 
     /// <summary>
+    /// POST /api/scan — Preview which files would be indexed for a repository path.
+    /// Does not modify anything; returns the discovered files and the pending delta.
+    /// </summary>
+    [HttpPost("scan")]
+    public IActionResult Scan([FromBody] ScanRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.RepositoryPath))
+            return BadRequest(new { error = "RepositoryPath is required." });
+
+        if (!Directory.Exists(request.RepositoryPath))
+            return BadRequest(new { error = $"Folder not found: {request.RepositoryPath}" });
+
+        try
+        {
+            var scanner = new RepositoryScanner();
+            var stateManager = new IndexStateManager();
+
+            var allFiles = scanner.Scan(request.RepositoryPath)
+                .Where(x => Path.GetFileName(x) != IndexStateManager.StateFileName)
+                .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var state = stateManager.Load(request.RepositoryPath);
+            var delta = stateManager.ComputeDelta(request.RepositoryPath, state, allFiles);
+
+            return Ok(new
+            {
+                totalFiles = allFiles.Count,
+                newOrModified = delta.NewOrModified.Count,
+                deleted = delta.Deleted.Count,
+                unchanged = allFiles.Count - delta.NewOrModified.Count,
+                needsIndexing = delta.NewOrModified.Count > 0 || delta.Deleted.Count > 0,
+                files = allFiles.Select(f => Path.GetRelativePath(request.RepositoryPath, f)).ToList()
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Scan failed for {Path}", request.RepositoryPath);
+            return StatusCode(500, new { error = "Scan failed." });
+        }
+    }
+
+    /// <summary>
     /// POST /api/context — Get relevant context chunks for a query, with optional filters.
     /// Returns both individual results and an aggregated context string.
     /// </summary>

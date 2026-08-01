@@ -11,6 +11,17 @@ builder.AddServiceDefaults();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// CORS for the Angular web UI (localhost dev server)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("rag-web", policy =>
+    {
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .SetIsOriginAllowed(_ => builder.Environment.IsDevelopment());
+    });
+});
+
 // Configuration
 var embeddingOptions = builder.Configuration
     .GetSection(EmbeddingOptions.SectionName)
@@ -47,6 +58,7 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+app.UseCors("rag-web");
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
