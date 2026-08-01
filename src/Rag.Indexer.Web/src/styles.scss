@@ -1,4 +1,26 @@
-@import '@angular/material/prebuilt-themes/azure-blue.css';
+@use '@angular/material' as mat;
+
+html {
+  color-scheme: light;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+      theme-type: light,
+    ),
+  ));
+}
+
+html.dark {
+  color-scheme: dark;
+  @include mat.theme((
+    color: (
+      primary: mat.$azure-palette,
+      tertiary: mat.$blue-palette,
+      theme-type: dark,
+    ),
+  ));
+}
 
 *,
 *::before,
@@ -12,11 +34,60 @@ body {
   margin: 0;
 }
 
+:root {
+  --app-bg: #f5f7fa;
+  --app-surface: #ffffff;
+  --app-surface-hover: #f8fafc;
+  --app-surface-muted: #f1f5f9;
+  --app-border: #e2e8f0;
+  --app-border-subtle: #f1f5f9;
+  --app-text: #1f2933;
+  --app-text-muted: #55616d;
+  --app-text-faint: #7b8794;
+  --app-accent: #0f6cbd;
+  --app-accent-bg: #e3f0fb;
+  --app-success: #1b5e20;
+  --app-success-bg: #e8f5e9;
+  --app-warning: #9a6700;
+  --app-warning-bg: #fdf3d7;
+  --app-error: #b3261e;
+  --app-error-bg: #fdecea;
+  --app-code-bg: #0f172a;
+  --app-code-text: #e2e8f0;
+  --app-context-bg: #f0f4f8;
+  --app-score: #2e7d32;
+}
+
+html.dark {
+  --app-bg: #0f1724;
+  --app-surface: #16202f;
+  --app-surface-hover: #1d2938;
+  --app-surface-muted: #1a2433;
+  --app-border: #2c3a4d;
+  --app-border-subtle: #243040;
+  --app-text: #e2e8f0;
+  --app-text-muted: #94a3b8;
+  --app-text-faint: #64748b;
+  --app-accent: #6fc2f0;
+  --app-accent-bg: #1d3a54;
+  --app-success: #81c784;
+  --app-success-bg: #1b3a24;
+  --app-warning: #e6c36a;
+  --app-warning-bg: #3a3016;
+  --app-error: #f28b82;
+  --app-error-bg: #3d1f1f;
+  --app-code-bg: #0b1220;
+  --app-code-text: #e2e8f0;
+  --app-context-bg: #0b1220;
+  --app-score: #81c784;
+}
+
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
-  background: #f5f7fa;
-  color: #1f2933;
+  background: var(--app-bg);
+  color: var(--app-text);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 code,

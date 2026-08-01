@@ -6,6 +6,14 @@
       <a routerLink="/index" routerLinkActive="active">Index</a>
       <a routerLink="/status" routerLinkActive="active">Status</a>
     </nav>
+    <button
+      mat-icon-button
+      class="theme-toggle"
+      (click)="toggleTheme()"
+      [attr.aria-label]="isDark ? 'Switch to light theme' : 'Switch to dark theme'"
+    >
+      <mat-icon>{{ isDark ? 'light_mode' : 'dark_mode' }}</mat-icon>
+    </button>
   </header>
   <main class="content">
     <router-outlet />

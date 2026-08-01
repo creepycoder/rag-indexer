@@ -38,8 +38,8 @@
   }
 
   &.error {
-    background: #fdecea;
-    color: #b3261e;
+    background: var(--app-error-bg);
+    color: var(--app-error);
   }
 }
 
@@ -50,7 +50,7 @@
   margin-bottom: 0.75rem;
 
   .count {
-    color: #55616d;
+    color: var(--app-text-muted);
     font-size: 0.9rem;
   }
 }
@@ -59,7 +59,7 @@
   margin-bottom: 1rem;
 
   pre.context {
-    background: #f0f4f8;
+    background: var(--app-context-bg);
     border-radius: 6px;
     padding: 0.75rem;
     white-space: pre-wrap;
@@ -87,29 +87,29 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #0f6cbd;
-    background: #e3f0fb;
+    color: var(--app-accent);
+    background: var(--app-accent-bg);
     border-radius: 10px;
     padding: 2px 8px;
   }
 
   .file {
-    color: #0f6cbd;
+    color: var(--app-accent);
   }
 
   .ns {
-    color: #55616d;
+    color: var(--app-text-muted);
   }
 
   .score {
     margin-left: auto;
     font-weight: 600;
-    color: #2e7d32;
+    color: var(--app-score);
   }
 
   pre.code {
-    background: #0f172a;
-    color: #e2e8f0;
+    background: var(--app-code-bg);
+    color: var(--app-code-text);
     border-radius: 6px;
     padding: 0.75rem;
     overflow-x: auto;
@@ -122,7 +122,7 @@
 }
 
 .empty {
-  color: #55616d;
+  color: var(--app-text-muted);
   text-align: center;
   padding: 2rem 0;
 }

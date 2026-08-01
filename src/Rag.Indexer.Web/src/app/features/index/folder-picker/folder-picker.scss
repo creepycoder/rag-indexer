@@ -20,7 +20,7 @@
     padding: 0.35rem 0.6rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    background: #f1f5f9;
+    background: var(--app-surface-muted);
     font-size: 0.8rem;
     font-family: var(--mono-font, Consolas, monospace);
     white-space: nowrap;
@@ -39,15 +39,15 @@
     padding: 0.5rem 0.6rem;
     margin-bottom: 0.5rem;
     border-radius: 6px;
-    background: #fdecea;
-    color: #b3261e;
+    background: var(--app-error-bg);
+    color: var(--app-error);
     font-size: 0.85rem;
   }
 
   .dir-list {
     max-height: 45vh;
     overflow-y: auto;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--app-border);
     border-radius: 6px;
     margin-bottom: 0.75rem;
   }
@@ -58,7 +58,7 @@
     gap: 0.5rem;
     padding: 0.45rem 0.6rem;
     font-size: 0.85rem;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid var(--app-border-subtle);
     cursor: pointer;
 
     &:last-child {
@@ -72,16 +72,16 @@
     }
 
     &:hover {
-      background: #f8fafc;
+      background: var(--app-surface-hover);
     }
 
     &.selected {
-      background: #e3f0fb;
+      background: var(--app-accent-bg);
     }
   }
 
   .empty {
-    color: #55616d;
+    color: var(--app-text-muted);
     text-align: center;
     padding: 1.5rem 0;
   }
@@ -98,7 +98,7 @@
       gap: 0.3rem;
       font-size: 0.8rem;
       font-family: var(--mono-font, Consolas, monospace);
-      color: #55616d;
+      color: var(--app-text-muted);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
