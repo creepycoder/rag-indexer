@@ -10,15 +10,15 @@ The project hosts a single MCP tool:
 |------|-------------|
 | `GetContext` | Search the Qdrant vector index for code chunks relevant to a natural-language query and return matching snippets with file, namespace, symbol, and score metadata. |
 
-This enables **any MCP-compatible AI assistant** (Claude Desktop, Cursor, Windsurf, Copilot CLI, etc.) to perform contextual code lookups without writing custom integration code.
+This enables **any MCP-compatible AI assistant** (VS Code with GitHub Copilot, etc.) to perform contextual code lookups without writing custom integration code.
 
 ## Architecture overview
 
 ```
 ┌──────────────────┐     MCP protocol      ┌─────────────────────┐
 │  AI Assistant    │ ◄──────────────────►  │ Rag.Indexer.Mcp     │
-│  (Claude, Cursor, │   stdio or HTTP     │ (.exe / Hosted)     │
-│   Copilot CLI…)   │                       │                     │
+│  (VS Code +      │   stdio or HTTP     │ (.exe / Hosted)     │
+│   GitHub Copilot) │                       │                     │
 │                  │                        │  IEmbeddingService  │
 └──────────────────┘                        │  (Ollama default)   │
                                             └──────┬──────────────┘
@@ -43,8 +43,7 @@ This enables **any MCP-compatible AI assistant** (Claude Desktop, Cursor, Windsu
   - [HTTP transport details](#http-transport-details)
 - [Configuration](#configuration)
 - [Getting Started](#getting-started)
-  - [Claude Desktop example](#getting-started-claude-desktop-example)
-  - [Cursor example](#getting-started-cursor-example)
+  - [VS Code / GitHub Copilot example](#getting-started-vs-code--github-copilot-example)
 - [Building & Debugging](#building-debugging)
   - [Logging in stdio mode](#logging-in-stdio-mode)
 - [Project dependencies](#project-dependencies)
@@ -59,7 +58,7 @@ This enables **any MCP-compatible AI assistant** (Claude Desktop, Cursor, Windsu
 
 | Mode | Use case | How to start |
 |------|----------|-------------|
-| **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (Claude Desktop, Cursor, etc.) | `dotnet run` |
+| **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (VS Code with GitHub Copilot, etc.) | `dotnet run` |
 | **HTTP** | Remote clients connecting over a network | `dotnet run -- --transport=http` |
 
 ### stdio transport details
@@ -86,7 +85,7 @@ All settings come from environment variables — no config files required.
 | `QDRANT_PORT` | `6334` | Qdrant gRPC port |
 | `MCP_TRANSPORT` | `stdio` | Override: set to `http` to force HTTP mode without passing `--transport=http` |
 
-## Getting Started (Claude Desktop example)
+## Getting Started (VS Code / GitHub Copilot example)
 
 1. Ensure Ollama and Qdrant are running locally:
    ```powershell
@@ -99,11 +98,12 @@ All settings come from environment variables — no config files required.
    dotnet run --project src/Rag.Indexer.Mcp
    ```
 
-3. Add the server to your Claude Desktop config (`claude_desktop_config.json`):
+3. Create (or edit) `.vscode/mcp.json` in the workspace root:
    ```json
    {
-     "mcpServers": {
+     "servers": {
        "rag-indexer": {
+         "type": "stdio",
          "command": "dotnet",
          "args": [
            "C:\\path\\to\\Rag.Indexer.Mcp.dll"
@@ -113,20 +113,8 @@ All settings come from environment variables — no config files required.
    }
    ```
 
-4. Restart Claude Desktop. You should see `GetContext` appear as an available tool in the agent panel.
-
-## Getting Started (Cursor example)
-
-In Cursor, open **Settings → Features → MCP → Add new MCP server**:
-
-```json
-{
-  "rag-indexer": {
-    "command": "dotnet",
-    "args": ["C:\\path\\to\\Rag.Indexer.Mcp.dll"]
-  }
-}
-```
+4. Reload the VS Code window (**Developer: Reload Window**).
+5. Open **GitHub Copilot Chat**, then open the **Tools** menu in the chat panel and confirm `rag-indexer` is listed and active. Copilot can then call `GetContext` during chat sessions.
 
 ## Building & Debugging
 
@@ -204,7 +192,7 @@ The server uses `WithToolsFromAssembly()` which automatically discovers and regi
 
 | Problem | Solution |
 |---------|----------|
-| AI client can't find tools | Verify `GetContext` appears in the MCP tool list (Claude Desktop: agent panel; Cursor: Settings → MCP). |
+| AI client can't find tools | Verify `GetContext` appears in the MCP tool list (VS Code: the **Tools** menu in GitHub Copilot Chat). |
 | Connection refused to Qdrant | Ensure `docker ps` shows a running Qdrant container on port 6334. |
 | Ollama errors | Run `curl http://localhost:11434/api/tags` to confirm the API is responsive and `mxbai-embed-large` is pulled. |
 | stdio mode stalls silently | Check stderr (`2> logs.txt`) — MCP protocol messages on stdout may be corrupted if logging was not cleared properly. |

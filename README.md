@@ -25,8 +25,7 @@ The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/se
   - [Transport modes](#transport-modes)
   - [Configuration (MCP-specific)](#configuration-mcp-specific)
   - [Tool available to AI clients](#tool-available-to-ai-clients)
-  - [Claude Desktop setup](#claude-desktop-setup)
-  - [Cursor setup](#cursor-setup)
+- [VS Code / GitHub Copilot setup](#vs-code--github-copilot-setup)
   - [Detailed documentation](#detailed-documentation)
 - [Configuration](#configuration)
   - [Embedding provider](#embedding-provider)
@@ -174,7 +173,7 @@ Like `/api/search`, but returns an aggregated, ready-to-inject context string al
 
 ## MCP Server (`Rag.Indexer.Mcp`)
 
-The solution includes a standalone **MCP (Model Context Protocol) server** that exposes the RAG indexer as an AI-assistant tool. Any MCP-compatible client — Claude Desktop, Cursor, Windsurf, Copilot CLI, etc. — can call `GetContext` to perform semantic code lookups without custom integration code.
+The solution includes a standalone **MCP (Model Context Protocol) server** that exposes the RAG indexer as an AI-assistant tool. Any MCP-compatible client — such as VS Code with GitHub Copilot — can call `GetContext` to perform semantic code lookups without custom integration code.
 
 ### Quick start
 
@@ -190,7 +189,7 @@ dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
 
 | Mode | Use case | How to start |
 |------|----------|-------------|
-| **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (Claude Desktop, Cursor, etc.) | `dotnet run` |
+| **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (VS Code with GitHub Copilot, etc.) | `dotnet run` |
 | **HTTP** | Remote clients connecting over a network | `dotnet run -- --transport=http` |
 
 #### stdio transport
@@ -221,12 +220,15 @@ dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
 |------|-----------|-------------|
 | `GetContext` | `get_context(query, limit=5)` | Searches indexed code and returns relevant code snippets with file, symbol, namespace, and score. |
 
-### Claude Desktop setup
+### VS Code / GitHub Copilot setup
+
+1. Create (or edit) `.vscode/mcp.json` in the workspace root:
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "rag-indexer": {
+      "type": "stdio",
       "command": "dotnet",
       "args": ["C:\\path\\to\\Rag.Indexer.Mcp.dll"]
     }
@@ -234,9 +236,9 @@ dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
 }
 ```
 
-### Cursor setup
-
-Open **Settings → Features → MCP → Add new MCP server** and add the same config block as above.
+2. Reload the VS Code window (**Developer: Reload Window**).
+3. Open **GitHub Copilot Chat**, then open the MCP server list (the **Tools** menu in the chat panel) and confirm `rag-indexer` is active.
+4. Ask a question in Copilot Chat — Copilot can call `GetContext` to search the indexed codebase.
 
 ### Detailed documentation
 
