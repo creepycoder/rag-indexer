@@ -9,10 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.Qdrant" Version="13.4.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Rag.Indexer.Api\Rag.Indexer.Api.csproj" />
+    <ProjectReference Include="..\Rag.Indexer.Mcp\Rag.Indexer.Mcp.csproj" />
+    <ProjectReference Include="..\Rag.Indexer.Worker\Rag.Indexer.Worker.csproj" />
   </ItemGroup>
 
 </Project>

@@ -50,7 +50,7 @@ The index is exposed through an **ASP.NET Core Web API** (`/api/index`, `/api/se
 - **Repository filtering** – Gitignore-style `.ragignore` patterns and an allow-listed set of file extensions.
 - **Web API** – REST endpoints for indexing, semantic search, and retrieving aggregated context, with OpenAPI + Scalar UI in development.
 - **MCP server** – Exposes a `GetContext` tool so AI assistants can query the index, over `stdio` or HTTP transport.
-- **Aspire orchestration** – `Rag.Indexer.AppHost` runs the API with the Aspire dashboard, OpenTelemetry, and service discovery.
+- **Aspire orchestration** – `Rag.Indexer.AppHost` runs the Qdrant container, the indexer worker, the API, and the MCP server, all visible in the Aspire dashboard with OpenTelemetry and service discovery.
 - **Graceful configuration** – `appsettings.json` is optional; falls back to environment variables and sensible defaults (`ollama`, `localhost:11434`).
 
 ---
@@ -81,7 +81,9 @@ src/
 │   └── Controllers/RagController.cs         # /api/index, /api/search, /api/context
 ├── Rag.Indexer.Mcp/                        # MCP server (stdio + HTTP)
 │   └── Tools/RagTools.cs                    # GetContext tool
-├── Rag.Indexer.AppHost/                    # Aspire orchestrator
+├── Rag.Indexer.Worker/                   # Continuous indexer worker (long-running)
+│   └── IndexerWorker.cs                   # Periodic delta indexing of configured repos
+├── Rag.Indexer.AppHost/                    # Aspire orchestrator (Qdrant + API + MCP + worker)
 └── Rag.Indexer.ServiceDefaults/            # Shared Aspire defaults (telemetry, health, resilience)
 ```
 
@@ -92,7 +94,7 @@ src/
 | Tool | Purpose | Install |
 |------|---------|---------|
 | **.NET 10 SDK** | Build & run | `winget install Microsoft.DotNet.SDK.10` |
-| **Qdrant** | Vector database (gRPC `:6334`, REST `:6333`) | Docker: `docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant` |
+| **Qdrant** | Vector database (gRPC `:6334`, REST `:6333`) | **Via Aspire** – automatically provisioned as a container resource by the AppHost (no manual install). **Standalone:** `docker run -d --name qdrant -p 6333:6333 -p 6334:6334 qdrant/qdrant` |
 | **Ollama** (default) | Local embeddings | `winget install Ollama.Ollama` then `ollama pull mxbai-embed-large` |
 | **Azure OpenAI** (optional) | Cloud embeddings | A deployed embedding model, e.g. `text-embedding-ada-002` |
 
@@ -114,7 +116,14 @@ dotnet build
 dotnet run --project src/Rag.Indexer.AppHost
 ```
 
-This starts the Aspire dashboard and the API. In development, OpenAPI is available at `/openapi/v1.json` and an interactive Scalar UI at `/scalar`.
+This starts the Aspire dashboard together with the full stack:
+
+- **`qdrant`** – the Qdrant vector database as an Aspire-managed container (data persisted in a named volume). Authentication is disabled by default, so the Qdrant web dashboard opens directly without asking for a key. Set `Qdrant:ApiKey` in the AppHost `.env` file to enable a key.
+- **`rag-api`** – the REST API. In development, OpenAPI is available at `/openapi/v1.json` and an interactive Scalar UI at `/scalar`.
+- **`rag-mcp`** – the MCP server, started in **HTTP transport** mode (`/mcp`) so it can be monitored from the dashboard.
+- **`rag-indexer`** – the continuous indexer worker, which periodically runs delta indexing for the repositories listed under `Indexing:Repositories`.
+
+All resources appear as cards in the dashboard with live logs, traces, and metrics. Qdrant exposes a web UI too — open its **HTTP** endpoint in the dashboard and append `/dashboard`.
 
 ### Run the Web API standalone
 
@@ -125,6 +134,25 @@ dotnet run --project src/Rag.Indexer.Api
 ### Run the MCP server
 
 See the [MCP Server README](src/Rag.Indexer.Mcp/README.md) for transport modes, configuration, and AI-client setup instructions.
+
+### Run the indexer worker (standalone)
+
+The `Rag.Indexer.Worker` project is a long-running process that keeps the index fresh. It scans the repositories under `Indexing:Repositories` on startup and re-runs **delta indexing** every `Indexing:IntervalSeconds` (default 300), so only changed files are reprocessed.
+
+```powershell
+$env:Indexing__Repositories__0 = "C:\Projects\MyApp"
+dotnet run --project src/Rag.Indexer.Worker
+```
+
+When running via Aspire, configure the same settings in `src/Rag.Indexer.AppHost/appsettings.json` (or user secrets):
+
+```json
+{
+  "Indexing": {
+    "Repositories": ["C:\\Projects\\MyApp"]
+  }
+}
+```
 
 ---
 
@@ -191,6 +219,8 @@ dotnet run --project src/Rag.Indexer.Mcp -- --transport=http
 |------|----------|-------------|
 | **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (VS Code with GitHub Copilot, etc.) | `dotnet run` |
 | **HTTP** | Remote clients connecting over a network | `dotnet run -- --transport=http` |
+
+> When launched from the Aspire AppHost, the MCP server always starts in **HTTP** mode (`--transport=http`) so it appears in the dashboard as a resource with a reachable `/mcp` endpoint and emits OpenTelemetry logs/traces.
 
 #### stdio transport
 
@@ -277,16 +307,27 @@ $env:Embedding__AzureOpenAi__Endpoint = "https://your-resource.openai.azure.com"
 $env:Embedding__AzureOpenAi__Key = "your-api-key"
 ```
 
+### AppHost `.env` file
+
+The AppHost loads an optional `.env` file from `src/Rag.Indexer.AppHost/` on startup. The file is **git-ignored** (a committed `src/Rag.Indexer.AppHost/.env.example` shows the format), so it is the right place for local secrets.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `Qdrant:ApiKey` | *(empty)* | Qdrant API key. Empty disables Qdrant authentication so the dashboard doesn't ask for a key. Set a value to enable authentication. |
+
 ### Service endpoints
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `QDRANT_HOST` | `localhost` | Qdrant host |
-| `QDRANT_PORT` | `6334` | Qdrant gRPC port |
-| `QDRANT_REST_PORT` | `6333` | Qdrant REST port (snapshots) |
+| `QDRANT_HOST` | `localhost` | Qdrant host (standalone) |
+| `QDRANT_PORT` | `6334` | Qdrant gRPC port (standalone) |
+| `QDRANT_REST_PORT` | `6333` | Qdrant REST port, snapshots (standalone) |
+| `QDRANT_APIKEY` | *(empty)* | Qdrant API key. Injected automatically by Aspire when running via the AppHost |
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama endpoint (MCP server) |
 | `OLLAMA_MODEL` | `mxbai-embed-large` | Ollama embedding model (MCP server) |
 | `MCP_TRANSPORT` | `stdio` | MCP transport: `stdio` or `http` |
+| `Indexing__Repositories` | *(none)* | Repository folder(s) the indexer worker keeps indexed (array) |
+| `Indexing__IntervalSeconds` | `300` | How often the worker re-runs delta indexing |
 
 ### `.ragignore`
 

@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Text;
 using ModelContextProtocol.Server;
-using Qdrant.Client;
 using Rag.Indexer.Services;
 
 namespace Rag.Indexer.Mcp.Tools;
@@ -24,9 +23,7 @@ public sealed class RagTools
     {
         var vector = await _embedding.CreateAsync(query);
 
-        var qdrant = new QdrantClient(
-            Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost",
-            int.TryParse(Environment.GetEnvironmentVariable("QDRANT_PORT"), out var port) ? port : 6334);
+        var qdrant = QdrantConnection.CreateClient();
 
         var results = await qdrant.SearchAsync(
             collectionName: "uefa_code",

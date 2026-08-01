@@ -18,15 +18,17 @@ public class QdrantSnapshotService
 
     public QdrantSnapshotService()
     {
-        var host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
-        var restPort = Environment.GetEnvironmentVariable("QDRANT_REST_PORT") ?? "6333";
-        _restUrl = $"http://{host}:{restPort}";
+        _restUrl = $"http://{QdrantConnection.HttpHost}:{QdrantConnection.HttpPort}";
         _collectionName = "uefa_code";
         _http = new HttpClient
         {
             BaseAddress = new Uri(_restUrl),
             Timeout = TimeSpan.FromMinutes(10) // Snapshots can take a while
         };
+
+        var apiKey = QdrantConnection.ApiKey;
+        if (!string.IsNullOrEmpty(apiKey))
+            _http.DefaultRequestHeaders.Add("api-key", apiKey);
     }
 
     /// <summary>

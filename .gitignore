@@ -3,3 +3,8 @@ obj/
 *.user
 .ragindex-state.json
 .vs/
+
+# Local AppHost environment file (secrets)
+.env
+.env.*
+!.env.example

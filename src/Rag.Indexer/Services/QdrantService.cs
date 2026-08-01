@@ -14,10 +14,9 @@ public class QdrantService
 
     public QdrantService()
     {
-        _host = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
-        var portStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
-        _port = int.TryParse(portStr, out var p) ? p : 6334;
-        _client = new QdrantClient(_host, _port);
+        _host = QdrantConnection.GrpcHost;
+        _port = QdrantConnection.GrpcPort;
+        _client = QdrantConnection.CreateClient();
     }
 
 

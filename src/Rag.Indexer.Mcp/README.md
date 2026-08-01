@@ -61,6 +61,8 @@ This enables **any MCP-compatible AI assistant** (VS Code with GitHub Copilot, e
 | **stdio** *(default)* | Local AI clients that connect via stdin/stdout pipes (VS Code with GitHub Copilot, etc.) | `dotnet run` |
 | **HTTP** | Remote clients connecting over a network | `dotnet run -- --transport=http` |
 
+> **Aspire:** when launched from the solution's AppHost, the MCP server runs in HTTP mode (`--transport=http`) as the `rag-mcp` resource. It appears in the Aspire dashboard with a reachable `/mcp` endpoint, and its logs/traces are visible via OpenTelemetry. Qdrant connection settings (`QDRANT_GRPCHOST`, `QDRANT_GRPCPORT`, `QDRANT_APIKEY`) and Ollama settings are injected automatically.
+
 ### stdio transport details
 
 - **stdout** — reserved exclusively for MCP protocol messages (JSON-RPC frames). *Never* write to stdout outside the MCP library.

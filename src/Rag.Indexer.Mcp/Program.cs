@@ -23,8 +23,9 @@ if (transport.Equals("http", StringComparison.OrdinalIgnoreCase))
 {
     var builder = WebApplication.CreateBuilder(args);
 
-    // Prevent ASP.NET logs from polluting stdout
-    builder.Logging.ClearProviders();
+    // Aspire service defaults (OpenTelemetry, health checks) so the MCP
+    // server is observable from the Aspire dashboard when run via the AppHost.
+    builder.AddServiceDefaults();
 
     RegisterServices(builder.Services);
 
@@ -32,6 +33,7 @@ if (transport.Equals("http", StringComparison.OrdinalIgnoreCase))
 
     var app = builder.Build();
     app.MapMcp();
+    app.MapDefaultEndpoints();
     app.Run();
 }
 else

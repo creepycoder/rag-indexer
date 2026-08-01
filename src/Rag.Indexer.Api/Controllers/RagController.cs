@@ -46,11 +46,7 @@ public class RagController : ControllerBase
             if (vector is null)
                 return StatusCode(502, new { error = "Failed to generate embedding." });
 
-            var qdrantHost = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
-            var qdrantPortStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
-            int.TryParse(qdrantPortStr, out var qdrantPort);
-
-            var qdrant = new QdrantClient(qdrantHost, qdrantPort > 0 ? qdrantPort : 6334);
+            var qdrant = QdrantConnection.CreateClient();
             var results = await qdrant.SearchAsync(
                 collectionName: "uefa_code",
                 vector: vector,
@@ -126,11 +122,7 @@ public class RagController : ControllerBase
             if (vector is null)
                 return StatusCode(502, new { error = "Failed to generate embedding." });
 
-            var qdrantHost = Environment.GetEnvironmentVariable("QDRANT_HOST") ?? "localhost";
-            var qdrantPortStr = Environment.GetEnvironmentVariable("QDRANT_PORT") ?? "6334";
-            int.TryParse(qdrantPortStr, out var qdrantPort);
-
-            var qdrant = new QdrantClient(qdrantHost, qdrantPort > 0 ? qdrantPort : 6334);
+            var qdrant = QdrantConnection.CreateClient();
 
             // Build filter if any optional filters are provided
             Filter? filter = null;
