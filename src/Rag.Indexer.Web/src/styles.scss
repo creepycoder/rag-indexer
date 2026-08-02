@@ -39,8 +39,8 @@ body {
   --app-surface: #ffffff;
   --app-surface-hover: #f8fafc;
   --app-surface-muted: #f1f5f9;
-  --app-border: #e2e8f0;
-  --app-border-subtle: #f1f5f9;
+  --app-border: rgba(0, 0, 0, 0.1);
+  --app-border-subtle: rgba(0, 0, 0, 0.05);
   --app-text: #1f2933;
   --app-text-muted: #55616d;
   --app-text-faint: #7b8794;
@@ -63,8 +63,8 @@ html.dark {
   --app-surface: #16202f;
   --app-surface-hover: #1d2938;
   --app-surface-muted: #1a2433;
-  --app-border: #2c3a4d;
-  --app-border-subtle: #243040;
+  --app-border: rgba(255, 255, 255, 0.12);
+  --app-border-subtle: rgba(255, 255, 255, 0.06);
   --app-text: #e2e8f0;
   --app-text-muted: #94a3b8;
   --app-text-faint: #64748b;
@@ -97,4 +97,47 @@ pre {
 
 .mat-mdc-card-title {
   font-size: 1rem !important;
+}
+
+.index-page,
+.search-page,
+.status-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.mat-mdc-button-base {
+  --mat-button-text-container-height: 36px;
+  --mat-button-text-touch-target-display: none;
+  --mat-button-text-horizontal-padding: 12px;
+  --mat-button-text-container-shape: 8px;
+  --mat-button-filled-container-height: 36px;
+  --mat-button-filled-touch-target-display: none;
+  --mat-button-filled-horizontal-padding: 16px;
+  --mat-button-filled-container-shape: 8px;
+  --mat-button-outlined-container-height: 36px;
+  --mat-button-outlined-touch-target-display: none;
+  --mat-button-outlined-horizontal-padding: 16px;
+  --mat-button-outlined-container-shape: 8px;
+  --mat-button-protected-container-height: 36px;
+  --mat-button-protected-touch-target-display: none;
+  --mat-button-protected-horizontal-padding: 16px;
+  --mat-button-protected-container-shape: 8px;
+  --mat-button-tonal-container-height: 36px;
+  --mat-button-tonal-touch-target-display: none;
+  --mat-button-tonal-horizontal-padding: 16px;
+  --mat-button-tonal-container-shape: 8px;
+}
+
+html,
+html.dark {
+  --mat-sys-corner-extra-large: 16px;
+  --mat-sys-corner-extra-large-top: 16px 16px 0 0;
+  --mat-sys-corner-large: 12px;
+  --mat-sys-corner-large-top: 12px 12px 0 0;
+  --mat-sys-corner-large-start: 12px 0 0 12px;
+  --mat-sys-corner-large-end: 0 12px 12px 0;
+  --mat-sys-corner-medium: 8px;
+  --mat-sys-corner-small: 6px;
 }

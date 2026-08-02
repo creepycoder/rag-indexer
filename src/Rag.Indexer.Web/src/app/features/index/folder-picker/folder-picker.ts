@@ -5,13 +5,23 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { firstValueFrom } from 'rxjs';
+import { NgScrollbarModule } from 'ngx-scrollbar';
+import { NgScrollbarMatDialog } from 'ngx-scrollbar/mat';
 
 import { toErrorMessage } from '../../../core/utils/errors';
 import { RagApiService } from '../../../core/services/rag-api.service';
 
 @Component({
   selector: 'folder-picker',
-  imports: [MatButtonModule, MatDialogModule, MatIconModule, MatProgressBarModule, MatTooltipModule],
+  imports: [
+    MatButtonModule,
+    MatDialogModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatTooltipModule,
+    NgScrollbarModule,
+    NgScrollbarMatDialog
+  ],
   templateUrl: './folder-picker.html',
   styleUrl: './folder-picker.scss'
 })

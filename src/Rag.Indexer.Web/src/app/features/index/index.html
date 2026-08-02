@@ -125,9 +125,9 @@
         @for (log of store.logs(); track log.timestamp + log.message + log.source) {
           <div class="log-line">
             <span class="log-time">{{ log.timestamp }}</span>
-            <span class="log-level {{ levelClass(log.level) }}">{{ log.level }}</span>
             <span class="log-source">{{ log.source }}</span>
             <span class="log-message">{{ log.message }}</span>
+            <span class="log-level {{ levelClass(log.level) }}">{{ log.level }}</span>
           </div>
         } @empty {
           <p class="empty">No log entries yet.</p>

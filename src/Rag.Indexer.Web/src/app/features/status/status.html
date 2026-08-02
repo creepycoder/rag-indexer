@@ -1,12 +1,12 @@
 <div class="status-page">
   <mat-card appearance="outlined" class="status-card">
     <mat-card-header>
-      <mat-card-title>Qdrant status</mat-card-title>
-      <mat-card-subtitle>
+      <mat-card-title class="title-row">
+        <span>Qdrant status</span>
         <span class="badge" [class.online]="store.connected()" [class.offline]="!store.connected()">
           {{ store.connected() ? 'online' : 'offline' }}
         </span>
-      </mat-card-subtitle>
+      </mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
@@ -50,7 +50,12 @@
         <div class="stat-grid">
           <div class="stat">
             <label>Status</label>
-            <span>{{ info.status }}</span>
+            <span
+              class="status {{ statusClass(info.status) }}"
+              [title]="info.status"
+            >
+              <mat-icon>{{ statusIcon(info.status) }}</mat-icon>
+            </span>
           </div>
           <div class="stat">
             <label>Points</label>

@@ -1,10 +1,6 @@
-.query-card {
-  margin-bottom: 1.25rem;
-}
-
 .query-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
 
   .query-field {
@@ -16,18 +12,11 @@
   }
 
   button {
-    margin-top: 6px;
-    height: 52px;
-    min-width: 120px;
+    height: 40px;
   }
 }
 
-.progress {
-  margin-bottom: 1rem;
-}
-
 .notice {
-  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -47,7 +36,6 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.75rem;
 
   .count {
     color: var(--app-text-muted);
@@ -56,8 +44,6 @@
 }
 
 .context-card {
-  margin-bottom: 1rem;
-
   pre.context {
     background: var(--app-context-bg);
     border-radius: 6px;
@@ -69,8 +55,6 @@
 }
 
 .result-card {
-  margin-bottom: 1rem;
-
   mat-card-header {
     margin-bottom: 0.5rem;
   }
@@ -89,7 +73,7 @@
     letter-spacing: 0.04em;
     color: var(--app-accent);
     background: var(--app-accent-bg);
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 2px 8px;
   }
 

@@ -1,5 +1,14 @@
 {
   "chat.tools.terminal.autoApprove": {
     "dotnet build": true
+  },
+  "chat.mcp.serverSampling": {
+    "Rag.Indexer/.vscode/mcp.json: rag-indexer": {
+      "allowedModels": [
+        "copilotcli/auto",
+        "copilot/auto",
+        "agent-host-copilotcli:gpt-5-mini"
+      ]
+    }
   }
 }

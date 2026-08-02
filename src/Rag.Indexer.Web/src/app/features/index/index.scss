@@ -1,10 +1,6 @@
-.index-card {
-  margin-bottom: 1.25rem;
-}
-
 .index-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
 
   .path-field {
@@ -12,15 +8,12 @@
   }
 
   .browse-btn {
-    margin-top: 6px;
-    height: 52px;
+    height: 40px;
     flex-shrink: 0;
   }
 
   button {
-    margin-top: 6px;
-    height: 52px;
-    min-width: 120px;
+    height: 40px;
   }
 }
 
@@ -28,13 +21,7 @@
   margin-top: 0.75rem;
 }
 
-.progress {
-  margin-bottom: 1rem;
-}
-
 .scan-card {
-  margin-bottom: 1rem;
-
   .scan-stats {
     display: flex;
     flex-wrap: wrap;
@@ -87,7 +74,6 @@
 }
 
 .notice {
-  margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -113,13 +99,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-
-    button {
-      margin-left: auto;
-    }
   }
 
   .log-list {
+    margin-top: 0.75rem;
     max-height: 60vh;
     overflow-y: auto;
     border: 1px solid var(--app-border);
@@ -128,7 +111,8 @@
 
   .log-line {
     display: grid;
-    grid-template-columns: 84px 76px 120px 1fr;
+    grid-template-columns: 172px 120px 1fr auto;
+    align-items: center;
     gap: 0.5rem;
     padding: 0.35rem 0.6rem;
     font-size: 0.82rem;
@@ -144,18 +128,22 @@
   }
 
   .log-time {
+    min-width: 0;
     color: var(--app-text-muted);
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .log-level {
+    justify-self: end;
     font-weight: 600;
     font-size: 0.72rem;
-    align-self: center;
     text-align: center;
-    border-radius: 10px;
+    border-radius: 6px;
     padding: 1px 6px;
-    width: fit-content;
+    white-space: nowrap;
 
     &.level-info {
       color: var(--app-accent);
@@ -179,6 +167,7 @@
   }
 
   .log-source {
+    min-width: 0;
     color: var(--app-text-faint);
     white-space: nowrap;
     overflow: hidden;
@@ -186,7 +175,11 @@
   }
 
   .log-message {
+    min-width: 0;
     color: var(--app-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

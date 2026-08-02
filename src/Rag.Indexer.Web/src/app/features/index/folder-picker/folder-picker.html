@@ -1,19 +1,22 @@
-<div class="picker">
-  <header class="picker-header">
+<div mat-dialog-title class="picker-title">
+  <div class="heading">
     <div class="title">
       <mat-icon>folder_open</mat-icon>
       <span>Select repository folder</span>
     </div>
-    <button
-      mat-icon-button
-      (click)="goUp()"
-      [disabled]="!parent() || loading()"
-      matTooltip="Go up one level"
-    >
-      <mat-icon>arrow_upward</mat-icon>
-    </button>
-  </header>
+    <div class="hint">Click to select · double-click to open</div>
+  </div>
+  <button
+    mat-icon-button
+    (click)="goUp()"
+    [disabled]="!parent() || loading()"
+    matTooltip="Go up one level"
+  >
+    <mat-icon>arrow_upward</mat-icon>
+  </button>
+</div>
 
+<mat-dialog-content class="picker-content" ngScrollbar appearance="compact">
   <div class="crumbs" [title]="currentPath()">
     {{ currentPath() || '(drives)' }}
   </div>
@@ -36,7 +39,6 @@
         [class.selected]="dir === selected()"
         (click)="select(dir)"
         (dblclick)="open(dir)"
-        matTooltip="Double-click to open"
       >
         <mat-icon>folder</mat-icon>
         <span class="name">{{ dir }}</span>
@@ -47,22 +49,23 @@
       }
     }
   </div>
+</mat-dialog-content>
 
-  <footer class="picker-footer">
-    <div class="selection">
-      <mat-icon>arrow_right_alt</mat-icon>
-      <span>{{ selected() ?? (currentPath() || 'Select a folder…') }}</span>
-    </div>
-    <div class="actions">
-      <button mat-button (click)="dialogRef.close(null)">Cancel</button>
-      <button
-        mat-flat-button
-        color="primary"
-        (click)="confirm()"
-        [disabled]="loading() || !selected()"
-      >
-        Select
-      </button>
-    </div>
-  </footer>
-</div>
+<mat-dialog-actions class="picker-actions">
+  <div class="selection" [title]="selected() ?? currentPath()">
+    <mat-icon>arrow_right_alt</mat-icon>
+    <span>{{ selected() ?? (currentPath() || 'Select a folder…') }}</span>
+  </div>
+
+  <div class="buttons">
+    <button mat-button (click)="dialogRef.close(null)">Cancel</button>
+    <button
+      mat-flat-button
+      color="primary"
+      (click)="confirm()"
+      [disabled]="loading() || !selected()"
+    >
+      Select
+    </button>
+  </div>
+</mat-dialog-actions>

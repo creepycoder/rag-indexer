@@ -1,5 +1,7 @@
-.status-card {
-  margin-bottom: 1.25rem;
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .badge {
@@ -8,7 +10,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 2px 10px;
 
   &.online {
@@ -66,7 +68,7 @@
   padding: 0.75rem;
   background: var(--app-surface-hover);
   border: 1px solid var(--app-border);
-  border-radius: 8px;
+  border-radius: 6px;
 
   label {
     font-size: 0.72rem;
@@ -80,5 +82,32 @@
     font-size: 1.15rem;
     font-weight: 600;
     color: var(--app-text);
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+
+  .mat-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 1.5rem;
+  }
+
+  &.status-green .mat-icon {
+    color: var(--app-success);
+  }
+
+  &.status-yellow .mat-icon {
+    color: var(--app-warning);
+  }
+
+  &.status-red .mat-icon {
+    color: var(--app-error);
+  }
+
+  &.status-grey .mat-icon {
+    color: var(--app-text-muted);
   }
 }

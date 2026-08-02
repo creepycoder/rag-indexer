@@ -1,24 +1,56 @@
-.picker {
-  width: 100%;
-  box-sizing: border-box;
+.picker-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 14px 24px 10px;
 
-  .picker-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 0.5rem;
-
-    .title {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 600;
-    }
+  &::before {
+    display: none;
   }
 
+  .heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+
+  .title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    font-weight: 600;
+  }
+
+  .hint {
+    padding-left: 2rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--app-text-muted);
+  }
+}
+
+.picker-content {
+  ::ng-deep .ng-scroll-content {
+    padding-bottom: 0.75rem;
+  }
+
+  --scrollbar-track-thickness: 8px;
+  --scrollbar-track-hover-thickness: 11px;
+  --scrollbar-track-color: transparent;
+  --scrollbar-container-offset: 2px;
+  --scrollbar-container-shape: 6px;
+  --scrollbar-thumb-color: var(--app-border);
+  --scrollbar-thumb-hover-color: var(--app-text-faint);
+  --scrollbar-thumb-active-color: var(--app-text-muted);
+  --scrollbar-thumb-min-size: 40px;
+
   .crumbs {
-    padding: 0.35rem 0.6rem;
     margin-bottom: 0.5rem;
+    padding: 0.35rem 0.6rem;
     border-radius: 6px;
     background: var(--app-surface-muted);
     font-size: 0.8rem;
@@ -33,11 +65,11 @@
   }
 
   .error {
+    margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
     gap: 0.4rem;
     padding: 0.5rem 0.6rem;
-    margin-bottom: 0.5rem;
     border-radius: 6px;
     background: var(--app-error-bg);
     color: var(--app-error);
@@ -45,69 +77,89 @@
   }
 
   .dir-list {
-    max-height: 45vh;
-    overflow-y: auto;
     border: 1px solid var(--app-border);
     border-radius: 6px;
-    margin-bottom: 0.75rem;
-  }
+    overflow: hidden;
 
-  .dir-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.6rem;
-    font-size: 0.85rem;
-    border-bottom: 1px solid var(--app-border-subtle);
-    cursor: pointer;
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .name {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    &:hover {
-      background: var(--app-surface-hover);
-    }
-
-    &.selected {
-      background: var(--app-accent-bg);
-    }
-  }
-
-  .empty {
-    color: var(--app-text-muted);
-    text-align: center;
-    padding: 1.5rem 0;
-  }
-
-  .picker-footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-
-    .selection {
+    .dir-row {
       display: flex;
       align-items: center;
-      gap: 0.3rem;
-      font-size: 0.8rem;
-      font-family: var(--mono-font, Consolas, monospace);
-      color: var(--app-text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      gap: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      border-bottom: 1px solid var(--app-border-subtle);
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      .mat-icon {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        font-size: 18px;
+        color: var(--app-text-muted);
+      }
+
+      .name {
+        flex: 1;
+        min-width: 0;
+        transform: translateY(-1px);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      &:hover {
+        background: var(--app-surface-hover);
+      }
+
+      &.selected {
+        background: var(--app-accent-bg);
+
+        .mat-icon {
+          color: var(--app-accent);
+        }
+      }
     }
 
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-      flex-shrink: 0;
+    .empty {
+      color: var(--app-text-muted);
+      text-align: center;
+      padding: 1.5rem 0;
     }
+  }
+}
+
+.picker-actions {
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 1.5rem;
+  border-top-color: var(--app-border);
+
+  .selection {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+    font-size: 0.8rem;
+    font-family: var(--mono-font, Consolas, monospace);
+    color: var(--app-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
   }
 }

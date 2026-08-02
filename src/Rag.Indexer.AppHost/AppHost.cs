@@ -14,7 +14,10 @@ var qdrantApiKey = builder.AddParameter(
     builder.Configuration["Qdrant:ApiKey"] ?? "",
     secret: true);
 
-var qdrant = builder.AddQdrant("qdrant", qdrantApiKey)
+// Pin Qdrant to the default host ports (REST 6333, gRPC 6334) so standalone
+// clients that connect to localhost:6334 (e.g. the MCP server) work without
+// knowing Aspire's ephemeral container port mapping.
+var qdrant = builder.AddQdrant("qdrant", qdrantApiKey, grpcPort: 6334, httpPort: 6333)
     .WithDataVolume();
 
 var api = builder.AddProject<Projects.Rag_Indexer_Api>("rag-api")

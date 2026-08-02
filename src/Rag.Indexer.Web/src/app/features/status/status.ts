@@ -23,4 +23,30 @@ import { StatusStore } from '../../stores/status.store';
 })
 export class Status {
   protected readonly store = inject(StatusStore);
+
+  protected statusIcon(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'green':
+        return 'check_circle';
+      case 'yellow':
+        return 'warning';
+      case 'red':
+        return 'cancel';
+      default:
+        return 'help_outline';
+    }
+  }
+
+  protected statusClass(status: string): string {
+    switch (status.toLowerCase()) {
+      case 'green':
+        return 'status-green';
+      case 'yellow':
+        return 'status-yellow';
+      case 'red':
+        return 'status-red';
+      default:
+        return 'status-grey';
+    }
+  }
 }
