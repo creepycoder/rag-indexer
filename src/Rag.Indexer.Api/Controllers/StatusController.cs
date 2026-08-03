@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Qdrant.Client.Grpc;
 using Rag.Indexer.Api.Models;
@@ -41,6 +42,55 @@ public class StatusController : ControllerBase
     }
 
     /// <summary>
+    /// GET /api/indexing/progress — Snapshot of the current indexing run.
+    /// </summary>
+    [HttpGet("indexing/progress")]
+    public IActionResult IndexingProgress()
+    {
+        return Ok(IndexProgressTracker.Instance.Snapshot());
+    }
+
+    /// <summary>
+    /// GET /api/indexing/progress/stream — Server-Sent Events stream that pushes
+    /// progress updates the moment the tracker changes, so the UI renders a
+    /// real-time progress bar without polling.
+    /// </summary>
+    [HttpGet("indexing/progress/stream")]
+    public async Task IndexingProgressStream(CancellationToken ct)
+    {
+        Response.ContentType = "text/event-stream";
+        Response.Headers.CacheControl = "no-cache";
+
+        var tracker = IndexProgressTracker.Instance;
+        string? lastSignature = null;
+
+        while (!ct.IsCancellationRequested)
+        {
+            var snapshot = tracker.Snapshot();
+            var signature = BuildSignature(snapshot);
+
+            // Only push a new event when something the UI needs actually changed.
+            // (ElapsedSeconds/id tick constantly, so they are excluded — otherwise
+            //  we'd re-push the identical frame every 500ms forever.)
+            if (signature != lastSignature)
+            {
+                var json = JsonSerializer.Serialize(snapshot);
+                await Response.WriteAsync($"id: {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}\n", ct);
+                await Response.WriteAsync($"data: {json}\n\n", ct);
+                lastSignature = signature;
+            }
+            else
+            {
+                // Comment frame keeps the connection alive through proxies/load balancers
+                await Response.WriteAsync(": ping\n\n", ct);
+            }
+
+            await Response.Body.FlushAsync(ct);
+            await Task.Delay(500, ct);
+        }
+    }
+
+    /// <summary>
     /// GET /api/logs — Recent entries from the in-memory log stream.
     /// </summary>
     [HttpGet("logs")]
@@ -54,6 +104,24 @@ public class StatusController : ControllerBase
 
         return Ok(new { entries = entries.Select(Map) });
     }
+
+    private static string BuildSignature(IndexProgress p) =>
+        string.Join('|',
+            p.IsRunning,
+            p.Phase,
+            p.RootFolder,
+            p.FilesToIndex,
+            p.FilesToDelete,
+            p.FilesDeleted,
+            p.ChunksIndexed,
+            p.TotalChunks,
+            p.FilesDone,
+            p.TotalFiles,
+            p.CurrentFile,
+            p.PercentComplete,
+            p.EstimatedRemainingSeconds,
+            string.Join(';', p.Errors),
+            p.Phase == "completed" || p.Phase == "failed" ? p.Summary : null);
 
     private static CollectionInfoDto Map(string name, CollectionInfo info) => new()
     {

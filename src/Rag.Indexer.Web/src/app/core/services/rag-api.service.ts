@@ -9,6 +9,7 @@ import type {
   CollectionsResponse,
   ContextResponse,
   DirectoryListing,
+  IndexProgress,
   IndexResponse,
   LogsResponse,
   RepositoriesResponse,
@@ -41,6 +42,10 @@ export class RagApiService {
 
   indexRepository(repositoryPath: string): Observable<IndexResponse> {
     return this.http.post<IndexResponse>(`${this.baseUrl}/api/index`, { repositoryPath });
+  }
+
+  getIndexingProgress(): Observable<IndexProgress> {
+    return this.http.get<IndexProgress>(`${this.baseUrl}/api/indexing/progress`);
   }
 
   scanRepository(repositoryPath: string): Observable<ScanResponse> {

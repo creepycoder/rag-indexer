@@ -83,10 +83,11 @@ public class RagController : ControllerBase
     }
 
     /// <summary>
-    /// POST /api/index — Index a repository folder into Qdrant.
+    /// POST /api/index — Start indexing a repository folder into Qdrant.
+    /// Returns immediately; progress is polled via GET /api/indexing/progress.
     /// </summary>
     [HttpPost("index")]
-    public async Task<IActionResult> Index([FromBody] IndexRequest request)
+    public IActionResult Index([FromBody] IndexRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.RepositoryPath))
             return BadRequest(new { error = "RepositoryPath is required." });
@@ -94,15 +95,20 @@ public class RagController : ControllerBase
         if (!Directory.Exists(request.RepositoryPath))
             return BadRequest(new { error = $"Folder not found: {request.RepositoryPath}" });
 
+        if (IndexProgressTracker.Instance.IsRunning)
+            return StatusCode(409, new { error = "An indexing operation is already in progress. Wait for it to finish." });
+
         try
         {
-            await _indexingService.IndexAsync(request.RepositoryPath);
-            return Ok(new { message = "Indexing completed.", path = request.RepositoryPath });
+            // Decouple the long-running operation from the HTTP request so the
+            // client can poll progress in real time while index runs in the background.
+            _ = Task.Run(async () => await _indexingService.IndexAsync(request.RepositoryPath));
+            return Ok(new { message = "Indexing started.", path = request.RepositoryPath });
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Indexing failed for {Path}", request.RepositoryPath);
-            return StatusCode(500, new { error = "Indexing failed." });
+            _logger.LogError(ex, "Failed to start indexing for {Path}", request.RepositoryPath);
+            return StatusCode(500, new { error = "Indexing failed to start." });
         }
     }
 

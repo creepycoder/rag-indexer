@@ -11,9 +11,11 @@ builder.AddServiceDefaults();
 var embeddingOptions = builder.Configuration
     .GetSection(EmbeddingOptions.SectionName)
     .Get<EmbeddingOptions>() ?? new EmbeddingOptions();
+var registryPath = RepositoryRegistry.ResolveRegistryPath(builder.Configuration);
 
 // Register services
 builder.Services.AddSingleton(embeddingOptions);
+builder.Services.AddSingleton(_ => new RepositoryRegistry(registryPath));
 builder.Services.AddSingleton<IEmbeddingService>(sp =>
 {
     var options = sp.GetRequiredService<EmbeddingOptions>();

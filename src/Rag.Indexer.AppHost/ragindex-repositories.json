@@ -1,0 +1,88 @@
+{
+  "Repositories": [
+    {
+      "path": "C:\\UEFA\\FSP-Listener",
+      "project": "FSP-Listener",
+      "last_indexed": "2026-08-03T06:36:24.1141399Z",
+      "file_count": 51
+    },
+    {
+      "path": "C:\\UEFA\\hatpro",
+      "project": "hatpro",
+      "last_indexed": "2026-08-03T06:38:22.3710016Z",
+      "file_count": 393
+    },
+    {
+      "path": "C:\\UEFA\\match-validation",
+      "project": "match-validation",
+      "last_indexed": "2026-08-03T06:41:37.3827529Z",
+      "file_count": 390
+    },
+    {
+      "path": "C:\\UEFA\\MatchAssetService",
+      "project": "MatchAssetService",
+      "last_indexed": "2026-08-03T06:48:19.6546482Z",
+      "file_count": 184
+    },
+    {
+      "path": "C:\\UEFA\\officials",
+      "project": "officials",
+      "last_indexed": "2026-08-03T06:50:38.096939Z",
+      "file_count": 1209
+    },
+    {
+      "path": "C:\\UEFA\\stadium-management",
+      "project": "stadium-management",
+      "last_indexed": "2026-08-03T06:54:01.0477224Z",
+      "file_count": 1450
+    },
+    {
+      "path": "C:\\UEFA\\technical-service",
+      "project": "technical-service",
+      "last_indexed": "2026-08-03T06:58:20.1495494Z",
+      "file_count": 2246
+    },
+    {
+      "path": "C:\\UEFA\\time",
+      "project": "time",
+      "last_indexed": "2026-08-03T07:03:04.3512857Z",
+      "file_count": 780
+    },
+    {
+      "path": "C:\\UEFA\\TIME.ClubCollectionInfo",
+      "project": "TIME.ClubCollectionInfo",
+      "last_indexed": "2026-08-03T07:03:51.9431398Z",
+      "file_count": 190
+    },
+    {
+      "path": "C:\\UEFA\\TIME.TIVA",
+      "project": "TIME.TIVA",
+      "last_indexed": "2026-08-03T07:04:27.2016806Z",
+      "file_count": 159
+    },
+    {
+      "path": "C:\\UEFA\\TIMEDocumentManagement",
+      "project": "TIMEDocumentManagement",
+      "last_indexed": "2026-08-03T07:09:59.2683351Z",
+      "file_count": 292
+    },
+    {
+      "path": "C:\\UEFA\\TIMEForms",
+      "project": "TIMEForms",
+      "last_indexed": "2026-08-03T07:13:11.2639884Z",
+      "file_count": 199
+    },
+    {
+      "path": "C:\\UEFA\\TIMEMatchPreparation",
+      "project": "TIMEMatchPreparation",
+      "last_indexed": "2026-08-03T07:15:18.6569552Z",
+      "file_count": 706
+    },
+    {
+      "path": "C:\\UEFA\\TIMEOnlineMatchSheets",
+      "project": "TIMEOnlineMatchSheets",
+      "last_indexed": "2026-08-03T07:15:56.3701708Z",
+      "file_count": 162
+    }
+  ]
+}

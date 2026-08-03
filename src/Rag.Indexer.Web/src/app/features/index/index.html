@@ -57,8 +57,37 @@
     </mat-card-content>
   </mat-card>
 
-  @if (store.scanning() || store.indexing()) {
+  @if (store.scanning()) {
     <mat-progress-bar mode="indeterminate" class="progress"></mat-progress-bar>
+  }
+
+  @if (store.indexing()) {
+    @if (store.progress(); as p) {
+      <mat-card appearance="outlined" class="progress-card">
+        <mat-card-content>
+          <mat-progress-bar mode="determinate" [value]="p.percentComplete"></mat-progress-bar>
+
+          <div class="progress-meta">
+            @if (p.phase === 'counting') {
+              <span class="phase">Counting files…</span>
+            } @else {
+              <span class="pct"><b>{{ p.percentComplete }}%</b></span>
+              <span>{{ p.chunksIndexed }} / {{ p.totalChunks }} chunks</span>
+              <span>•</span>
+              <span>{{ p.filesDone }} / {{ p.totalFiles }} files</span>
+            }
+            @if (p.estimatedRemainingSeconds != null) {
+              <span>•</span>
+              <span>~{{ formatEta(p.estimatedRemainingSeconds) }} left</span>
+            }
+          </div>
+
+          @if (p.currentFile) {
+            <div class="current-file">{{ p.currentFile }}</div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
   }
 
   @if (store.scanResult(); as scan) {

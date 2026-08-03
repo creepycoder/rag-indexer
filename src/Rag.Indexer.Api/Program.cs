@@ -26,9 +26,11 @@ builder.Services.AddCors(options =>
 var embeddingOptions = builder.Configuration
     .GetSection(EmbeddingOptions.SectionName)
     .Get<EmbeddingOptions>() ?? new EmbeddingOptions();
+var registryPath = RepositoryRegistry.ResolveRegistryPath(builder.Configuration);
 
 // Register services
 builder.Services.AddSingleton(embeddingOptions);
+builder.Services.AddSingleton(_ => new RepositoryRegistry(registryPath));
 builder.Services.AddSingleton<IEmbeddingService>(sp =>
 {
     var options = sp.GetRequiredService<EmbeddingOptions>();
@@ -59,7 +61,14 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("rag-web");
-app.UseHttpsRedirection();
+// Only enforce HTTPS redirect outside Development. The web UI is configured to
+// talk to plain http://localhost:5004, and forcing a 307 to https:// breaks the
+// progress EventSource in a browser (cross-origin http->https redirect is not
+// followed), making the progress bar/status appear dead for a background index.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseAuthorization();
 app.MapControllers();
 app.MapDefaultEndpoints();

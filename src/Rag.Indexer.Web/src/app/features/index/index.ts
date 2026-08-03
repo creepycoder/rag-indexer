@@ -40,7 +40,11 @@ export class Index {
     const seen = new Set<string>();
     const options: string[] = [];
 
-    for (const path of [...this.store.configuredRepositories(), ...this.store.recentPaths()]) {
+    for (const path of [
+      ...this.store.configuredRepositories(),
+      ...this.store.indexedRepositories().map((repository) => repository.path),
+      ...this.store.recentPaths()
+    ]) {
       const key = path.toLowerCase();
       if (!path || seen.has(key)) continue;
       seen.add(key);
@@ -65,5 +69,13 @@ export class Index {
 
   protected levelClass(level: string): string {
     return `level-${level.toLowerCase()}`;
+  }
+
+  protected formatEta(seconds: number): string {
+    if (seconds < 0) return '';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}m ${secs}s`;
   }
 }

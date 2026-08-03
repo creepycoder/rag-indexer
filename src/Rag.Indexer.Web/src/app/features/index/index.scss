@@ -94,6 +94,42 @@
   }
 }
 
+.progress-card {
+  mat-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .progress-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--app-text-muted);
+
+    .pct b {
+      color: var(--app-accent);
+      font-size: 1.15rem;
+    }
+
+    .phase {
+      color: var(--app-text);
+      font-weight: 500;
+    }
+  }
+
+  .current-file {
+    font-family: var(--mono-font, Consolas, monospace);
+    font-size: 0.78rem;
+    color: var(--app-text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 .logs-card {
   mat-card-header {
     display: flex;

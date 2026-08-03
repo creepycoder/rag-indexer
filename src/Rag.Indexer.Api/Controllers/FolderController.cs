@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Rag.Indexer.Services;
 
 namespace Rag.Indexer.Api.Controllers;
 
@@ -45,13 +46,15 @@ public class FolderController : ControllerBase
 
     /// <summary>
     /// GET /api/repositories — The repositories configured for the indexer worker
-    /// (Indexing:Repositories), so the UI can offer them as quick choices.
+    /// (Indexing:Repositories), plus the folders that have actually been indexed.
     /// </summary>
     [HttpGet("repositories")]
-    public IActionResult Repositories([FromServices] IConfiguration config)
+    public IActionResult Repositories(
+        [FromServices] IConfiguration config,
+        [FromServices] RepositoryRegistry registry)
     {
         var repositories = config.GetSection("Indexing:Repositories").Get<string[]>() ?? [];
-        return Ok(new { repositories });
+        return Ok(new { repositories, indexedRepositories = registry.GetAll() });
     }
 
     private static List<string> GetDriveRoots()

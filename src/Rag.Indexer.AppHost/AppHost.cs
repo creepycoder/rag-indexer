@@ -14,6 +14,12 @@ var qdrantApiKey = builder.AddParameter(
     builder.Configuration["Qdrant:ApiKey"] ?? "",
     secret: true);
 
+var registryPath = builder.Configuration["Indexing:RegistryPath"];
+if (string.IsNullOrWhiteSpace(registryPath))
+{
+    registryPath = Path.Combine(builder.AppHostDirectory, "ragindex-repositories.json");
+}
+
 // Pin Qdrant to the default host ports (REST 6333, gRPC 6334) so standalone
 // clients that connect to localhost:6334 (e.g. the MCP server) work without
 // knowing Aspire's ephemeral container port mapping.
@@ -28,7 +34,8 @@ var api = builder.AddProject<Projects.Rag_Indexer_Api>("rag-api")
     .WithEnvironment("OLLAMA_BASE_URL", ollamaBaseUrl)
     .WithEnvironment("OLLAMA_MODEL", ollamaModel)
     .WithEnvironment("Embedding__Ollama__BaseUrl", ollamaBaseUrl)
-    .WithEnvironment("Embedding__Ollama__Model", ollamaModel);
+    .WithEnvironment("Embedding__Ollama__Model", ollamaModel)
+    .WithEnvironment("Indexing__RegistryPath", registryPath);
 
 var mcp = builder.AddProject<Projects.Rag_Indexer_Mcp>("rag-mcp")
     .WaitFor(qdrant)
@@ -45,7 +52,8 @@ var worker = builder.AddProject<Projects.Rag_Indexer_Worker>("rag-indexer")
     .WithReference(qdrant)
     .WithReference(ollama)
     .WithEnvironment("Embedding__Ollama__BaseUrl", ollamaBaseUrl)
-    .WithEnvironment("Embedding__Ollama__Model", ollamaModel);
+    .WithEnvironment("Embedding__Ollama__Model", ollamaModel)
+    .WithEnvironment("Indexing__RegistryPath", registryPath);
 
 var repositories = builder.Configuration.GetSection("Indexing:Repositories").Get<string[]>() ?? [];
 for (var i = 0; i < repositories.Length; i++)
