@@ -25,13 +25,13 @@ This enables **any MCP-compatible AI assistant** (VS Code with GitHub Copilot, e
                                                    │ vector
                                              ┌─────▼───────┐
                                              │     Qdrant    │
-                                             │  uefa_code    │
+                                             │  test_code    │
                                              │  collection   │
                                              └───────────────┘
 ```
 
 - **Embedded service** — The MCP server embeds `IEmbeddingService` (Ollama, default; pluggable) to convert query text into embedding vectors.
-- **Direct Qdrant client** — Each tool call opens a lightweight `QdrantClient` connected to the configured host and queries the `uefa_code` collection with cosine similarity.
+- **Direct Qdrant client** — Each tool call opens a lightweight `QdrantClient` connected to the configured host and queries the `test_code` collection with cosine similarity.
 - **Dual transport** — Runs over **stdio** (for local editor integration) or **HTTP** (for remote/networked scenarios).
 
 ## Table of Contents
