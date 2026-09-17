@@ -103,7 +103,7 @@ src/
 | **Ollama** (default) | Local embeddings | `winget install Ollama.Ollama` then `ollama pull mxbai-embed-large` |
 | **Azure OpenAI** (optional) | Cloud embeddings | A deployed embedding model, e.g. `text-embedding-ada-002` |
 
-The `uefa_code` collection is created automatically on first indexing run.
+The `test_code` collection is created automatically on first indexing run.
 
 > **Ollama via Aspire:** when run through the AppHost, Ollama is started automatically as a managed **`ollama serve`** process (an executable resource, not a container) on `http://localhost:11434`, with a health check and dashboard commands (List All Models / List Running Models). The `mxbai-embed-large` model must still be pulled once: `ollama pull mxbai-embed-large`.
 
@@ -422,7 +422,7 @@ Auto-generated in the indexed root folder; tracks content hashes for delta detec
    - **Deleted files** → their Qdrant points are removed.
    - **Unchanged files** → skipped entirely.
 3. State is saved after every file, so an interrupt only loses the current file's work.
-4. If the `uefa_code` collection is deleted, the stale state file is discarded and a full re-index runs.
+4. If the `_code` collection is deleted, the stale state file is discarded and a full re-index runs.
 
 ---
 
